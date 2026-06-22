@@ -27,24 +27,29 @@ Item {
     function computeShape(shape, params) {
         var raw = MathStackBackend.shapeArea(JSON.stringify({ shape: shape, params: params }))
         var d = JSON.parse(raw)
-        if (!d.ok) { geomResult.text = "Error: " + d.error; return }
-        var result = shape.charAt(0).toUpperCase() + shape.slice(1) + ":\n" +
-            "Area: " + d.area.toFixed(4) + "\n" +
-            "Perimeter: " + d.perimeter.toFixed(4)
-        if (d.volume !== undefined) {
-            result += "\nVolume: " + d.volume.toFixed(4)
+        var result
+        if (!d.ok) { result = "Error: " + d.error }
+        else {
+            result = shape.charAt(0).toUpperCase() + shape.slice(1) + ":\n" +
+                "Area: " + d.area.toFixed(4) + "\n" +
+                "Perimeter: " + d.perimeter.toFixed(4)
+            if (d.volume !== undefined) {
+                result += "\nVolume: " + d.volume.toFixed(4)
+            }
         }
-        geomResult.text = result
+        if (shape === "circle") geomResultCircle.text = result
+        else if (shape === "rectangle") geomResultRect.text = result
+        else if (shape === "triangle") geomResultTri.text = result
     }
 
     function computeDistance() {
         var p1 = parseNums(p1Input.text)
         var p2 = parseNums(p2Input.text)
-        if (p1.length < 2 || p2.length < 2) { geomResult.text = "Enter two coordinates for each point"; return }
+        if (p1.length < 2 || p2.length < 2) { geomResultDist.text = "Enter two coordinates for each point"; return }
         var raw = MathStackBackend.distance(JSON.stringify({ p1: p1, p2: p2 }))
         var d = JSON.parse(raw)
-        if (!d.ok) { geomResult.text = "Error: " + d.error; return }
-        geomResult.text = "Distance: " + d.distance.toFixed(4)
+        if (!d.ok) { geomResultDist.text = "Error: " + d.error; return }
+        geomResultDist.text = "Distance: " + d.distance.toFixed(4)
     }
 
     property var shapes3d: [
@@ -256,12 +261,12 @@ Item {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: geomResult.implicitHeight + Theme.spacingMd * 2
+                        Layout.preferredHeight: geomResultCircle.implicitHeight + Theme.spacingMd * 2
                         color: "#FFFFFF"; radius: Theme.radiusSm; border.color: "#0A000000"
-                        visible: geomResult.text !== ""
+                        visible: geomResultCircle.text !== ""
 
                         Text {
-                            id: geomResult
+                            id: geomResultCircle
                             anchors.fill: parent; anchors.margins: Theme.spacingMd
                             color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                             font.family: Theme.fontMono; wrapMode: Text.WrapAnywhere
@@ -321,15 +326,15 @@ Item {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: geomResult.implicitHeight + Theme.spacingMd * 2
+                        Layout.preferredHeight: geomResultRect.implicitHeight + Theme.spacingMd * 2
                         color: "#FFFFFF"; radius: Theme.radiusSm; border.color: "#0A000000"
-                        visible: geomResult.text !== ""
+                        visible: geomResultRect.text !== ""
 
                         Text {
+                            id: geomResultRect
                             anchors.fill: parent; anchors.margins: Theme.spacingMd
                             color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                             font.family: Theme.fontMono; wrapMode: Text.WrapAnywhere
-                            text: geomResult.text
                         }
                     }
                 }
@@ -405,15 +410,15 @@ Item {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: geomResult.implicitHeight + Theme.spacingMd * 2
+                        Layout.preferredHeight: geomResultTri.implicitHeight + Theme.spacingMd * 2
                         color: "#FFFFFF"; radius: Theme.radiusSm; border.color: "#0A000000"
-                        visible: geomResult.text !== ""
+                        visible: geomResultTri.text !== ""
 
                         Text {
+                            id: geomResultTri
                             anchors.fill: parent; anchors.margins: Theme.spacingMd
                             color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                             font.family: Theme.fontMono; wrapMode: Text.WrapAnywhere
-                            text: geomResult.text
                         }
                     }
                 }
@@ -471,15 +476,15 @@ Item {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: geomResult.implicitHeight + Theme.spacingMd * 2
+                        Layout.preferredHeight: geomResultDist.implicitHeight + Theme.spacingMd * 2
                         color: "#FFFFFF"; radius: Theme.radiusSm; border.color: "#0A000000"
-                        visible: geomResult.text !== ""
+                        visible: geomResultDist.text !== ""
 
                         Text {
+                            id: geomResultDist
                             anchors.fill: parent; anchors.margins: Theme.spacingMd
                             color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                             font.family: Theme.fontMono; wrapMode: Text.WrapAnywhere
-                            text: geomResult.text
                         }
                     }
                 }

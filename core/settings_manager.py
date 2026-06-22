@@ -21,7 +21,6 @@ class SettingsManager:
     def __init__(self, db: DatabaseManager, dev_mode=False):
         self._db = db
         self._dev_mode = dev_mode
-        self._cache = None
 
     @property
     def data_dir(self):
@@ -30,7 +29,10 @@ class SettingsManager:
         return os.path.join(base, sub)
 
     def get(self, key, default=None):
-        val = self._db.get_setting(key)
+        try:
+            val = self._db.get_setting(key)
+        except Exception:
+            val = None
         if val is not None:
             return val
         return _DEFAULTS.get(key, default)

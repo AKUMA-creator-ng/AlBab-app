@@ -98,7 +98,7 @@ class MatrixBackend(QObject):
             data = json.loads(json_data)
             m = Matrix(data)
             return json.dumps({"ok": True, "result": m.rref()})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ImportError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, result=str)

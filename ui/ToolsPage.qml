@@ -321,9 +321,16 @@ Item {
         }
     }
 
+    property var toolInstances: ({
+        0: calculatorTool, 1: equationSolverTool, 2: graphPlotterTool, 3: formulaLibraryTool,
+        4: linearAlgebraTool, 5: graphAlgorithmsTool, 6: statisticsTool, 7: geometryTool,
+        8: meshEditorTool, 9: timelineTool, 10: sourceAnalyzerTool, 11: coordCalcTool,
+        12: demographicsTool, 13: mindMapPageTool
+    })
+
     function onNew() {
         if (activeTool < 0) return
-        var tool = toolContainer.children[activeTool]
+        var tool = toolInstances[activeTool]
         if (tool && typeof tool.onNew === "function") tool.onNew()
     }
     function onClose() {
@@ -331,7 +338,7 @@ Item {
     }
     function onExport() {
         if (activeTool < 0) return
-        var tool = toolContainer.children[activeTool]
+        var tool = toolInstances[activeTool]
         if (tool && typeof tool.onExport === "function") tool.onExport()
     }
 
@@ -341,19 +348,19 @@ Item {
         anchors.topMargin: navBar.visible ? navBar.height : 0
         visible: activeTool >= 0
 
-        Calculator { anchors.fill: parent; visible: activeTool === 0; onBack: activeTool = -1 }
-        EquationSolver { anchors.fill: parent; visible: activeTool === 1; onBack: activeTool = -1 }
-        GraphPlotter { anchors.fill: parent; visible: activeTool === 2; onBack: activeTool = -1 }
-        FormulaLibrary { anchors.fill: parent; visible: activeTool === 3; onBack: activeTool = -1 }
-        LinearAlgebra { anchors.fill: parent; visible: activeTool === 4; onBack: activeTool = -1 }
-        GraphAlgorithms { anchors.fill: parent; visible: activeTool === 5; onBack: activeTool = -1 }
-        Statistics { anchors.fill: parent; visible: activeTool === 6; onBack: activeTool = -1 }
-        Geometry { anchors.fill: parent; visible: activeTool === 7; onBack: activeTool = -1 }
-        MeshEditor { anchors.fill: parent; visible: activeTool === 8; onBack: activeTool = -1 }
-        Timeline { anchors.fill: parent; visible: activeTool === 9; onBack: activeTool = -1 }
-        SourceAnalyzer { anchors.fill: parent; visible: activeTool === 10; onBack: activeTool = -1 }
-        CoordCalc { anchors.fill: parent; visible: activeTool === 11; onBack: activeTool = -1 }
-        Demographics { anchors.fill: parent; visible: activeTool === 12; onBack: activeTool = -1 }
-        MindMapPage { anchors.fill: parent; visible: activeTool === 13; onBack: activeTool = -1 }
+        Calculator { id: calculatorTool; anchors.fill: parent; visible: activeTool === 0; onBack: activeTool = -1 }
+        EquationSolver { id: equationSolverTool; anchors.fill: parent; visible: activeTool === 1; onBack: activeTool = -1 }
+        GraphPlotter { id: graphPlotterTool; anchors.fill: parent; visible: activeTool === 2; onBack: activeTool = -1 }
+        FormulaLibrary { id: formulaLibraryTool; anchors.fill: parent; visible: activeTool === 3; onBack: activeTool = -1 }
+        LinearAlgebra { id: linearAlgebraTool; anchors.fill: parent; visible: activeTool === 4; onBack: activeTool = -1 }
+        GraphAlgorithms { id: graphAlgorithmsTool; anchors.fill: parent; visible: activeTool === 5; onBack: activeTool = -1 }
+        Statistics { id: statisticsTool; anchors.fill: parent; visible: activeTool === 6; onBack: activeTool = -1 }
+        Geometry { id: geometryTool; anchors.fill: parent; visible: activeTool === 7; onBack: activeTool = -1 }
+        MeshEditor { id: meshEditorTool; anchors.fill: parent; visible: activeTool === 8; onBack: activeTool = -1 }
+        Timeline { id: timelineTool; anchors.fill: parent; visible: activeTool === 9; onBack: activeTool = -1 }
+        SourceAnalyzer { id: sourceAnalyzerTool; anchors.fill: parent; visible: activeTool === 10; onBack: activeTool = -1 }
+        CoordCalc { id: coordCalcTool; anchors.fill: parent; visible: activeTool === 11; onBack: activeTool = -1 }
+        Demographics { id: demographicsTool; anchors.fill: parent; visible: activeTool === 12; onBack: activeTool = -1 }
+        MindMapPage { id: mindMapPageTool; anchors.fill: parent; visible: activeTool === 13; onBack: activeTool = -1 }
     }
 }

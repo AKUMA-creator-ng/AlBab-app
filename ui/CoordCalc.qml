@@ -198,7 +198,8 @@ Item {
         var lat = parseFloat(ddLat.text) || 0
         var lng = parseFloat(ddLng.text) || 0
         var raw = GeoUtils.convertDD(lat, lng)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { convertResult.text = "Parse error"; root.isLoading = false; return }
         convertResult.text = "DMS:\n" + d.dms_lat + "\n" + d.dms_lng
         root.isLoading = false
     }
@@ -214,7 +215,8 @@ Item {
         var s2 = parseFloat(dmsS2.text) || 0
         var dir2 = dmsDir2.text.trim().toUpperCase() || "E"
         var raw = GeoUtils.convertDMS(d1, m1, s1, dir1, d2, m2, s2, dir2)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { dmsResult.text = "Parse error"; root.isLoading = false; return }
         dmsResult.text = "Lat: " + d.lat + "\nLng: " + d.lng
         root.isLoading = false
     }
@@ -225,9 +227,11 @@ Item {
         var lat2 = parseFloat(p2Lat.text) || 0
         var lng2 = parseFloat(p2Lng.text) || 0
         var raw = GeoUtils.haversine(lat1, lng1, lat2, lng2)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { distResult.text = "Parse error"; return }
         var raw2 = GeoUtils.bearing(lat1, lng1, lat2, lng2)
-        var b = JSON.parse(raw2)
+        var b
+        try { b = JSON.parse(raw2) } catch(e) { distResult.text = "Parse error"; return }
         distResult.text = "Distance: " + d.km + " km (" + d.miles + " miles)\nBearing: " + b.degrees + "\u00B0 " + b.compass
     }
 
@@ -242,7 +246,8 @@ Item {
         }
         if (rows.length === 0) { batchResult.text = "No valid data"; return }
         var raw = GeoUtils.batchConvert(JSON.stringify(rows), "dd_to_dms")
-        var out = JSON.parse(raw)
+        var out
+        try { out = JSON.parse(raw) } catch(e) { batchResult.text = "Parse error"; return }
         var text = ""
         for (var j = 0; j < out.length; j++) {
             text += out[j][0] + "  " + out[j][1] + "\n"

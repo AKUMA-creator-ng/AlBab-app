@@ -27,7 +27,7 @@ class UserManager(QObject):
     @Property(str, notify=userChanged)
     def currentName(self):
         if self._current_user:
-            return self._current_user.get("first_name", "") + " " + self._current_user.get("last_name", "")
+            return (self._current_user.get("first_name", "") + " " + self._current_user.get("last_name", "")).strip()
         return ""
 
     @Property(str, notify=userChanged)
@@ -99,6 +99,22 @@ class UserManager(QObject):
     def logout(self):
         self._current_user = None
         self.userChanged.emit()
+
+    @Slot(str, str, str, result=str)
+    def updateCurrentUser(self, first_name: str, last_name: str, faculty: str) -> str:
+        if not self._current_user:
+            return json.dumps({"ok": False, "error": "No user logged in"})
+        first_name = first_name.strip()
+        last_name = last_name.strip()
+        faculty = faculty.strip()
+        if not first_name or not last_name:
+            return json.dumps({"ok": False, "error": "Name is required"})
+        email = self._current_user["email"]
+        self._db.delete_user(email)
+        self._db.add_user(email, first_name, last_name, faculty)
+        self._current_user = {"email": email, "first_name": first_name, "last_name": last_name, "faculty": faculty}
+        self.userChanged.emit()
+        return json.dumps({"ok": True})
 
     @Slot(str, str, str, result=str)
     def registerLocal(self, first_name: str, last_name: str, faculty: str) -> str:

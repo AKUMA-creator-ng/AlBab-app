@@ -5,7 +5,10 @@ import time
 from PySide6.QtCore import QObject, Slot
 
 _TEMP_DIR = os.path.join(tempfile.gettempdir(), "albab_demo")
-os.makedirs(_TEMP_DIR, exist_ok=True)
+try:
+    os.makedirs(_TEMP_DIR, exist_ok=True)
+except OSError:
+    pass
 _MAX_TEMP_FILES = 50
 _TEMP_MAX_AGE = 1800
 _demo_counter = 0
@@ -18,7 +21,7 @@ def _cleanup_temp_files():
         old = [f for f in files if now - os.path.getmtime(f) > _TEMP_MAX_AGE]
         for f in old:
             os.remove(f)
-        files = sorted([f for f in files if f not in old], key=os.path.getmtime)
+        files = sorted([f for f in files if f not in set(old)], key=os.path.getmtime)
         while len(files) > _MAX_TEMP_FILES:
             os.remove(files.pop(0))
     except OSError:
@@ -96,7 +99,8 @@ class DemographicsBackend(QObject):
         self._load_data()
         for c in _mem_cache.get("countries", []):
             if c["iso3"].upper() == iso3.upper():
-                return json.dumps(c)
+                c_no_geom = {k: v for k, v in c.items() if k != "geometry"}
+                return json.dumps(c_no_geom)
         return json.dumps({"error": "not found"})
 
     @Slot(result=str)
@@ -181,7 +185,11 @@ class DemographicsBackend(QObject):
         self._load_data()
         c1 = next((c for c in _mem_cache.get("countries", []) if c["iso3"].upper() == iso3_1.upper()), None)
         c2 = next((c for c in _mem_cache.get("countries", []) if c["iso3"].upper() == iso3_2.upper()), None)
-        return json.dumps({"a": c1, "b": c2} if c1 and c2 else {"error": "not found"})
+        if c1 and c2:
+            c1_clean = {k: v for k, v in c1.items() if k != "geometry"}
+            c2_clean = {k: v for k, v in c2.items() if k != "geometry"}
+            return json.dumps({"a": c1_clean, "b": c2_clean})
+        return json.dumps({"error": "not found"})
 
     @Slot(str, result=str)
     def searchCountries(self, query: str) -> str:

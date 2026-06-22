@@ -29,7 +29,8 @@ Item {
         var arr = parseNums(statInput.text)
         if (arr.length < 2) { statResult.text = "Need at least 2 numbers"; return }
         var raw = MathStackBackend.descriptiveStats(JSON.stringify(arr))
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { statResult.text = "Parse error"; return }
         if (!d.ok) { statResult.text = "Error: " + d.error; return }
         statResult.text = "N: " + d.n +
             "\nMean: " + d.mean.toFixed(4) +
@@ -50,7 +51,8 @@ Item {
         if (arr.length < 2) { hypResult.text = "Need at least 2 numbers"; return }
         var mu = parseFloat(ttestMu.text) || 0
         var raw = MathStackBackend.ttestOneSample(JSON.stringify({ values: arr, mu: mu }))
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { hypResult.text = "Parse error"; return }
         if (!d.ok) { hypResult.text = "Error: " + d.error; return }
         hypResult.text = "One-Sample T-Test (vs mu=" + mu + "):\n" +
             "t = " + d.t_stat.toFixed(4) + "\np = " + d.p_value.toFixed(4)
@@ -61,7 +63,8 @@ Item {
         var b = parseNums(ttestBInput.text)
         if (a.length < 2 || b.length < 2) { hypResult.text = "Each group needs at least 2 numbers"; return }
         var raw = MathStackBackend.ttestIndependent(JSON.stringify(a), JSON.stringify(b))
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { hypResult.text = "Parse error"; return }
         if (!d.ok) { hypResult.text = "Error: " + d.error; return }
         hypResult.text = "Independent T-Test:\n" +
             "t = " + d.t_stat.toFixed(4) + "\np = " + d.p_value.toFixed(4)
@@ -76,7 +79,8 @@ Item {
         }
         if (parsed.length < 2) { hypResult.text = "Need at least 2 groups"; return }
         var raw = MathStackBackend.anova(JSON.stringify(parsed))
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { hypResult.text = "Parse error"; return }
         if (!d.ok) { hypResult.text = "Error: " + d.error; return }
         hypResult.text = "One-Way ANOVA:\n" +
             "F = " + d.f_stat.toFixed(4) + "\np = " + d.p_value.toFixed(4)
@@ -88,7 +92,8 @@ Item {
         if (x.length < 3 || y.length < 3) { regResult.text = "Need at least 3 points"; return }
         if (x.length !== y.length) { regResult.text = "X and Y must have same length"; return }
         var raw = MathStackBackend.linearRegression(JSON.stringify(x), JSON.stringify(y))
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { regResult.text = "Parse error"; return }
         if (!d.ok) { regResult.text = "Error: " + d.error; return }
         regResult.text = "Linear Regression:\n" +
             "y = " + d.slope.toFixed(4) + "x + " + d.intercept.toFixed(4) +

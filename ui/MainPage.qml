@@ -10,7 +10,8 @@ Item {
 
     states: [
         State { name: "form"; when: _hasMainBackend && !MainBackend.hasProfile },
-        State { name: "dashboard"; when: _hasMainBackend && MainBackend.hasProfile }
+        State { name: "dashboard"; when: _hasMainBackend && MainBackend.hasProfile },
+        State { name: "default"; when: !_hasMainBackend }
     ]
 
     property string formError: ""
@@ -31,10 +32,11 @@ Item {
 
     Item {
         anchors.fill: parent
-        visible: parent.state === "form"
+        visible: parent.state === "form" || parent.state === "default"
 
         ColumnLayout {
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.spacingLg
             width: Math.min(parent.width * 0.42, 440)
 
@@ -207,6 +209,7 @@ Item {
     }
 
     function submitProfile() {
+        if (!_hasMainBackend) return
         var fn = firstNameField.text.trim()
         var ln = lastNameField.text.trim()
         if (!fn && !ln) {

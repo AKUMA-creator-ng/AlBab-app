@@ -154,8 +154,10 @@ Item {
     function centerView() {
         var rootPos = nodePositions["root"]
         if (rootPos) {
-            scrollFlickable.contentX = rootPos.x * zoomLevel - scrollFlickable.width / 3
-            scrollFlickable.contentY = rootPos.y * zoomLevel - scrollFlickable.height / 2
+            var cx = rootPos.x * zoomLevel - scrollFlickable.width / 3
+            var cy = rootPos.y * zoomLevel - scrollFlickable.height / 2
+            scrollFlickable.contentX = Math.max(0, Math.min(cx, scrollFlickable.contentWidth - scrollFlickable.width))
+            scrollFlickable.contentY = Math.max(0, Math.min(cy, scrollFlickable.contentHeight - scrollFlickable.height))
         }
     }
 

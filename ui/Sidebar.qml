@@ -82,7 +82,7 @@ Rectangle {
             Layout.preferredHeight: 1
             Layout.leftMargin: Theme.spacingMd
             Layout.rightMargin: Theme.spacingMd
-            color: "#0FFFFFFF"
+            color: "#20FFFFFF"
         }
         Item { Layout.preferredHeight: Theme.spacingXs }
 

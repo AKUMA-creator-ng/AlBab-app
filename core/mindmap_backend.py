@@ -28,14 +28,11 @@ _MINDMAP_PROMPT = (
     "Text:\n{text}"
 )
 
-_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-
 _FREE_PROVIDERS = [
     {
         "name": "Groq",
         "base_url": "https://api.groq.com/openai/v1",
         "model": "llama-3.3-70b-versatile",
-        "api_key": _GROQ_API_KEY,
         "env_key": "GROQ_API_KEY",
     },
     {
@@ -189,6 +186,8 @@ class MindMapBackend(QObject):
         self._gemini_client = None
         self._selected_provider = "auto"
         self._generation_done = False
+        self._gen_id = 0
+        self._timeout_timer = None
         if self._api_key:
             self._init_gemini()
 
@@ -228,13 +227,17 @@ class MindMapBackend(QObject):
             return
 
         self._generation_done = False
+        self._gen_id += 1
+        gen_id = self._gen_id
         self.statusChanged.emit("generating")
-        thread = threading.Thread(target=self._generate_thread, args=(text,), daemon=True)
-        thread.start()
-
+        if self._timeout_timer:
+            self._timeout_timer.cancel()
         timer = threading.Timer(60.0, self._force_timeout)
         timer.daemon = True
+        self._timeout_timer = timer
         timer.start()
+        thread = threading.Thread(target=self._generate_thread, args=(text, gen_id), daemon=True)
+        thread.start()
 
     def _force_timeout(self):
         if self._generation_done:
@@ -280,7 +283,9 @@ class MindMapBackend(QObject):
         except Exception as e:
             self.errorOccurred.emit(f"Failed to read file: {str(e)}")
 
-    def _generate_thread(self, text):
+    def _generate_thread(self, text, gen_id):
+        if gen_id != self._gen_id:
+            return
         try:
             prompt = _MINDMAP_PROMPT.format(text=text[:8000])
 
@@ -291,16 +296,24 @@ class MindMapBackend(QObject):
                     return
 
             elif self._selected_provider == "groq":
+                if gen_id != self._gen_id:
+                    return
                 result = self._try_openai_provider(_FREE_PROVIDERS[0], prompt)
                 if result:
+                    if gen_id != self._gen_id:
+                        return
                     self.mindMapReady.emit(json.dumps(result))
                     return
 
             else:
                 for provider in _FREE_PROVIDERS:
+                    if gen_id != self._gen_id:
+                        return
                     self.statusChanged.emit(f"Trying {provider['name']}...")
                     result = self._try_openai_provider(provider, prompt)
                     if result:
+                        if gen_id != self._gen_id:
+                            return
                         self.mindMapReady.emit(json.dumps(result))
                         return
 

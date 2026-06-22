@@ -38,7 +38,8 @@ Item {
     function runOp(name) {
         root.isLoading = true
         var raw = MatrixBackend[name](getMatrixData())
-        var obj = JSON.parse(raw)
+        var obj
+        try { obj = JSON.parse(raw) } catch(e) { resultText.text = "Parse error"; root.isLoading = false; return }
         root.isLoading = false
         if (obj.ok) {
             if (obj.result !== undefined) {

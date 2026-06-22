@@ -41,7 +41,8 @@ Item {
             raw = GraphBackend[name](getMatrixData(), extra.start, extra.end)
         else
             raw = GraphBackend[name](getMatrixData())
-        var obj = JSON.parse(raw)
+        var obj
+        try { obj = JSON.parse(raw) } catch(e) { resultText.text = "Parse error"; root.isLoading = false; return }
         root.isLoading = false
         if (obj.ok) {
             if (obj.connected !== undefined) {
@@ -171,7 +172,11 @@ Item {
                     { t: "Connectivity", fn: function(){ runOp("connectivity") } },
                     { t: "Components", fn: function(){ runOp("connectedComponents") } },
                     { t: "Bipartite", fn: function(){ runOp("bipartite") } },
-                    { t: "Shortest Path", fn: function(){ runOp("shortestPath", {start: startSpin.value, end: endSpin.value}) } },
+                    { t: "Shortest Path", fn: function(){
+                        var s = Math.min(startSpin.value, graphSize - 1)
+                        var e = Math.min(endSpin.value, graphSize - 1)
+                        runOp("shortestPath", {start: s, end: e})
+                    } },
                     { t: "MST (Prim)", fn: function(){ runOp("mst") } },
                 ]
                 delegate: Rectangle {
@@ -194,9 +199,9 @@ Item {
         RowLayout {
             spacing: Theme.spacingSm
             Text { text: "Path Start:"; color: Theme.textSecondary }
-            SpinBox { id: startSpin; from: 0; to: 9; value: 0 }
+            SpinBox { id: startSpin; from: 0; to: Math.max(1, sizeSpin.value - 1); value: 0 }
             Text { text: "End:"; color: Theme.textSecondary }
-            SpinBox { id: endSpin; from: 0; to: 9; value: 0 }
+            SpinBox { id: endSpin; from: 0; to: Math.max(1, sizeSpin.value - 1); value: 0 }
         }
 
         Rectangle {

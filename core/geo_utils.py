@@ -62,7 +62,10 @@ class GeoUtils(QObject):
 
     @Slot(str, str, result=str)
     def batchConvert(self, csvJson: str, mode: str) -> str:
-        rows = json.loads(csvJson)
+        try:
+            rows = json.loads(csvJson)
+        except (json.JSONDecodeError, TypeError):
+            return json.dumps([["error", "Invalid JSON"]])
         out = []
         for row in rows:
             try:

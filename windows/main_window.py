@@ -13,9 +13,9 @@ class MainWindowBackend(QObject):
         self._first_name = ""
         self._last_name = ""
         self._faculty = ""
-        self._sync_from_user_manager()
         if self._user_manager:
             self._user_manager.userChanged.connect(self._sync_from_user_manager)
+        self._sync_from_user_manager()
 
     def _sync_from_user_manager(self):
         if self._user_manager:

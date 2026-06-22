@@ -55,6 +55,9 @@ class ChatSessionManager(QObject):
 
     @Slot(str)
     def switchSession(self, session_id: str):
+        s = self._db.get_chat_session(session_id)
+        if not s:
+            return
         self._current_id = session_id
         self.currentSessionChanged.emit()
 
@@ -73,14 +76,17 @@ class ChatSessionManager(QObject):
     @Slot(str)
     def deleteSessionsByName(self, name: str):
         sessions = self._db.list_chat_sessions()
+        deleted_ids = set()
         for s in sessions:
             if s["name"] == name:
                 self._db.delete_chat_session(s["id"])
-        remaining = self._db.list_chat_sessions()
-        if remaining:
-            self._current_id = remaining[0]["id"]
-        else:
-            self._current_id = None
+                deleted_ids.add(s["id"])
+        if self._current_id in deleted_ids:
+            remaining = self._db.list_chat_sessions()
+            if remaining:
+                self._current_id = remaining[0]["id"]
+            else:
+                self._current_id = None
         self.sessionsChanged.emit()
         self.currentSessionChanged.emit()
 
@@ -153,27 +159,30 @@ class ChatSessionManager(QObject):
         session = self._db.get_chat_session(self._current_id)
         if not session:
             return ""
-        name = session["name"]
-        msgs = self._db.get_chat_messages(self._current_id)
-        lines = [f"# {name}", ""]
-        for m in msgs:
-            role = "You" if m["role"] == "user" else "AI"
-            content = m["content"]
-            if m["reasoning"]:
-                lines.append(f"**{role}** (_reasoning: {m['reasoning'][:100]}..._)")
-            else:
-                lines.append(f"**{role}**")
-            lines.append(content)
-            lines.append("---" if m["role"] == "ai" else "")
-            lines.append("")
-        import os
-        export_dir = os.path.join(os.path.expanduser("~"), "Documents", "AlBab")
-        os.makedirs(export_dir, exist_ok=True)
-        safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in name)[:50].strip()
-        path = os.path.join(export_dir, f"{safe_name}.md")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines).strip())
-        return path
+        try:
+            name = session["name"]
+            msgs = self._db.get_chat_messages(self._current_id)
+            lines = [f"# {name}", ""]
+            for m in msgs:
+                role = "You" if m["role"] == "user" else "AI"
+                content = m["content"]
+                if m["reasoning"]:
+                    lines.append(f"**{role}** (_reasoning: {m['reasoning'][:100]}..._)")
+                else:
+                    lines.append(f"**{role}**")
+                lines.append(content)
+                lines.append("---" if m["role"] == "ai" else "")
+                lines.append("")
+            import os
+            export_dir = os.path.join(os.path.expanduser("~"), "Documents", "AlBab")
+            os.makedirs(export_dir, exist_ok=True)
+            safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in name)[:50].strip()
+            path = os.path.join(export_dir, f"{safe_name}.md")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines).strip())
+            return path
+        except Exception:
+            return ""
 
     def _auto_name(self, session_id: str, first_text: str):
         s = self._db.get_chat_session(session_id)

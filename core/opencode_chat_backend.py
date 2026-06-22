@@ -65,8 +65,10 @@ class OpenCodeChatBackend(QObject):
             return
 
         if self._user_context and not self._context_injected:
-            text = f"SYSTEM: {self._user_context}\n\n{text}"
-            self._context_injected = True
+            with self._lock:
+                if not self._context_injected:
+                    text = f"SYSTEM: {self._user_context}\n\n{text}"
+                    self._context_injected = True
 
         self._set_thinking(True)
         self._stop_event.clear()
@@ -267,8 +269,14 @@ class OpenCodeChatBackend(QObject):
     @Slot(str, result="QVariant")
     def exportSession(self, session_id: str):
         # Run in a thread to avoid blocking the UI
-        result = self._run_export(session_id)
-        return result
+        def _run():
+            result = self._run_export(session_id)
+            try:
+                self.sessionsListChanged.emit()
+            except RuntimeError:
+                pass
+        threading.Thread(target=_run, daemon=True).start()
+        return {}
 
     def _fetch_session_title(self, session_id: str):
         def _run():

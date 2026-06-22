@@ -10,7 +10,7 @@ Item {
     property int pendingIdx: -1
     property bool isLoading: false
     property bool sidebarVisible: true
-    property string errBuf: ""
+    property string errBuf: "" // unused — kept for ABI compatibility
 
     property color termBg:      "#0D0D0D"
     property color termText:    "#D4D4D4"
@@ -247,12 +247,12 @@ Item {
                             Accessible.name: "Show sidebar"
                         }
                         Text {
-                            text: "OpenCode \u2014 " + (OpenCodeBackend.isThinking ? "Working..." : "Ready")
-                            color: OpenCodeBackend.isThinking ? termGreen : termDim; font.pixelSize: 11; font.family: Theme.fontMono
+                            text: "OpenCode \u2014 " + (typeof OpenCodeBackend !== 'undefined' && OpenCodeBackend.isThinking ? "Working..." : "Ready")
+                            color: typeof OpenCodeBackend !== 'undefined' && OpenCodeBackend.isThinking ? termGreen : termDim; font.pixelSize: 11; font.family: Theme.fontMono
                         }
                         Item { Layout.fillWidth: true }
                         Text {
-                            visible: OpenCodeBackend.isThinking
+                            visible: typeof OpenCodeBackend !== 'undefined' && OpenCodeBackend.isThinking
                             text: "\u25A0"; color: "#F44747"; font.pixelSize: 11; font.family: Theme.fontMono
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { OpenCodeBackend.stopGeneration(); root.isLoading = false; root.pendingIdx = -1 } }
                         }

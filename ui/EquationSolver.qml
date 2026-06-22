@@ -176,21 +176,24 @@ Item {
             var expr = input.text.trim()
             if (!expr) return
             root.isLoading = true
-            var result
-            if (mode === 0) {
-                result = MathEngine.solve(expr)
-            } else if (mode === 1) {
-                result = MathEngine.differentiate(expr)
-            } else if (mode === 2) {
-                result = MathEngine.integrate(expr)
-            } else if (mode === 3) {
-                var a = parseFloat(boundA.text) || 0
-                var b = parseFloat(boundB.text) || 0
-                result = MathEngine.definiteIntegral(expr, a, b)
+            try {
+                var result
+                if (mode === 0) {
+                    result = MathEngine.solve(expr)
+                } else if (mode === 1) {
+                    result = MathEngine.differentiate(expr)
+                } else if (mode === 2) {
+                    result = MathEngine.integrate(expr)
+                } else if (mode === 3) {
+                    var a = parseFloat(boundA.text) || 0
+                    var b = parseFloat(boundB.text) || 0
+                    result = MathEngine.definiteIntegral(expr, a, b)
+                }
+                root.resultText = result
+                outputText.text = result
+            } finally {
+                root.isLoading = false
             }
-            root.resultText = result
-            root.isLoading = false
-            outputText.text = result
         }
     }
 }

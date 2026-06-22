@@ -90,7 +90,7 @@ def _make_ns(x=None, y=None):
 
 
 def _clean_expr(expression: str) -> str:
-    return expression.replace("^", "**")
+    return expression.replace("^", "**").replace("\u00F7", "/").replace("\u00D7", "*")
 
 
 def _save_fig(fig, prefix: str) -> str:

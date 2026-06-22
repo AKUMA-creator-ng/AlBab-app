@@ -3,7 +3,7 @@ import QtQuick
 Rectangle {
     id: root
 
-    property alias contentItem: content.children
+    property alias contentChildren: content.children
     property int cardRadius: Theme.radiusLg
     property real glassOpacity: 0.60
     property bool hoverable: false

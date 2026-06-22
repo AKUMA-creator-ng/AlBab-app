@@ -17,7 +17,7 @@ Item {
     property string selectedModel: modelKeys[modelIndex]
 
     Connections {
-        target: MindMapBackend
+        target: typeof MindMapBackend !== 'undefined' ? MindMapBackend : null
         ignoreUnknownSignals: true
         function onMindMapReady(jsonString) {
             root.isGenerating = false
@@ -395,6 +395,7 @@ Item {
         nameFilters: ["PDF files (*.pdf)"]
         onAccepted: {
             var path = selectedFile.toString()
+            if (path.startsWith("file:///")) path = path.substring(8)
             if (path) MindMapBackend.generateFromPdf(path)
         }
     }
@@ -405,6 +406,7 @@ Item {
         nameFilters: ["Text files (*.txt *.md *.csv)", "All files (*)"]
         onAccepted: {
             var path = selectedFile.toString()
+            if (path.startsWith("file:///")) path = path.substring(8)
             if (path) MindMapBackend.generateFromFile(path)
         }
     }

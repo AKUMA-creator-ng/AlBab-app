@@ -14,24 +14,26 @@ class ExportBackend(QObject):
     @Slot(str, str, result=bool)
     def exportText(self, content: str, filename: str) -> bool:
         try:
-            path = os.path.join(self._export_dir, filename)
+            safe_filename = os.path.basename(filename)
+            path = os.path.join(self._export_dir, safe_filename)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
             self.exportComplete.emit(path, True)
             return True
-        except OSError as e:
+        except (OSError, TypeError) as e:
             self.exportComplete.emit(str(e), False)
             return False
 
     @Slot(str, str, result=bool)
     def exportJson(self, data: str, filename: str) -> bool:
         try:
-            path = os.path.join(self._export_dir, filename)
+            safe_filename = os.path.basename(filename)
+            path = os.path.join(self._export_dir, safe_filename)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(data)
             self.exportComplete.emit(path, True)
             return True
-        except OSError as e:
+        except (OSError, TypeError) as e:
             self.exportComplete.emit(str(e), False)
             return False
 

@@ -71,7 +71,10 @@ class MeshBackend(QObject):
 
     @Slot(str, str, result=str)
     def addPrimitive(self, name: str, jsonParams: str) -> str:
-        params = json.loads(jsonParams)
+        try:
+            params = json.loads(jsonParams)
+        except (json.JSONDecodeError, TypeError):
+            params = {}
         shape = params.get("type", "cube")
         size = params.get("size", 2)
         radius = params.get("radius", 1.5)

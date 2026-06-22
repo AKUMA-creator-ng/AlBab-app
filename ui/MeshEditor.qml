@@ -802,14 +802,22 @@ Item {
                         }
 
                         MouseArea {
+                            id: canvasMouseArea
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton
                             cursorShape: Qt.SizeAllCursor
+                            property real pressX: 0
+                            property real pressY: 0
                             onPressed: {
                                 root.prevMX = mouseX; root.prevMY = mouseY
+                                pressX = mouseX; pressY = mouseY
                                 root.dragging = true
                             }
-                            onReleased: root.dragging = false
+                            onReleased: {
+                                root.dragging = false
+                                var dist = Math.sqrt((mouseX - pressX) * (mouseX - pressX) + (mouseY - pressY) * (mouseY - pressY))
+                                if (dist < 5) root.onCanvasClick(mouseX, mouseY)
+                            }
                             onPositionChanged: {
                                 if (!root.dragging) return
                                 var dx = mouseX - root.prevMX
@@ -818,9 +826,6 @@ Item {
                                 root.rotX += dy * 0.012
                                 root.prevMX = mouseX; root.prevMY = mouseY
                                 canvas.requestPaint()
-                            }
-                            onClicked: {
-                                root.onCanvasClick(mouseX, mouseY)
                             }
                         }
 
@@ -852,7 +857,7 @@ Item {
                     Flickable {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        contentHeight: propCol.height
+                        contentHeight: propCol.implicitHeight
                         clip: true
                         ColumnLayout {
                             id: propCol
@@ -866,12 +871,12 @@ Item {
                                 visible: selObjId !== ""
                             }
 
-                            property var selObj: (function() {
+                            property var selObj: {
+                                var result = null
                                 for (var i = 0; i < sceneData.objects.length; i++)
-                                    if (sceneData.objects[i].id === selObjId)
-                                        return sceneData.objects[i]
-                                return null
-                            })()
+                                    if (sceneData.objects[i].id === selObjId) { result = sceneData.objects[i]; break }
+                                return result
+                            }
 
                             Repeater {
                                 model: selObjId !== "" ? [1] : []

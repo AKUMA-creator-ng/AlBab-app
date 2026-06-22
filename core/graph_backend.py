@@ -12,12 +12,14 @@ class GraphAlgo:
             return False, []
         n = self.n
         visited = [False] * n
-        def dfs(v: int) -> None:
-            visited[v] = True
-            for u in range(n):
-                if self.data[v][u] != 0 and not visited[u]:
-                    dfs(u)
-        dfs(0)
+        stack = [0]
+        while stack:
+            v = stack.pop()
+            if not visited[v]:
+                visited[v] = True
+                for u in range(n):
+                    if self.data[v][u] != 0 and not visited[u]:
+                        stack.append(u)
         return all(visited), []
 
     def connected_components(self) -> list:
@@ -63,6 +65,8 @@ class GraphAlgo:
 
     def shortest_path(self, start: int, end: int) -> list | None:
         if self.n == 0:
+            return None
+        if not (0 <= start < self.n) or not (0 <= end < self.n):
             return None
         n = self.n
         dist = [float('inf')] * n

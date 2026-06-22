@@ -324,13 +324,14 @@ class DatabaseManager:
 
     def search_chat_messages(self, query: str):
         with self._lock:
-            like = f"%{query}%"
+            safe_q = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{safe_q}%"
             rows = self._conn.execute(
                 "SELECT m.id, m.session_id, m.role, m.content, m.created_at, "
                 "s.name AS session_name, s.backend "
                 "FROM chat_messages m "
                 "JOIN chat_sessions s ON s.id = m.session_id "
-                "WHERE m.content LIKE ? "
+                "WHERE m.content LIKE ? ESCAPE '\\' "
                 "ORDER BY m.created_at DESC LIMIT 50",
                 (like,)
             ).fetchall()
@@ -381,14 +382,13 @@ class DatabaseManager:
             ).fetchone()
             return row["id"] if row else None
 
-    def __del__(self):
-        try:
-            self._conn.close()
-        except Exception:
-            pass
-
     def close(self):
-        self._conn.close()
+        if self._conn:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
 
     @property
     def path(self):

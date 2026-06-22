@@ -5,11 +5,14 @@ from core.user_manager import UserManager
 
 class SettingsBackend(QObject):
     settingsChanged = Signal()
+    userChanged = Signal()
 
     def __init__(self, settings: SettingsManager = None, user_manager: UserManager = None, parent=None):
         super().__init__(parent)
         self._settings = settings
         self._user_manager = user_manager
+        if self._user_manager:
+            self._user_manager.userChanged.connect(self.settingsChanged.emit)
 
     @Property(str, notify=settingsChanged)
     def language(self):
@@ -63,8 +66,11 @@ class SettingsBackend(QObject):
 
     @Slot(str, str, str)
     def updateProfile(self, first: str, last: str, faculty: str) -> None:
+        first = first.strip()
+        last = last.strip()
+        faculty = faculty.strip()
         if self._user_manager:
-            self._user_manager.registerLocal(first, last, faculty)
+            self._user_manager.updateCurrentUser(first, last, faculty)
         if self._settings:
             profile = self._settings.get("profile", {})
             profile["first_name"] = first

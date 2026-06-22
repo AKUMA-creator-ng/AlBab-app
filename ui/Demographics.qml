@@ -22,7 +22,8 @@ Item {
 
     function refreshCountryList() {
         var raw = DemographicsBackend.getCountries()
-        var arr = JSON.parse(raw)
+        var arr
+        try { arr = JSON.parse(raw) } catch(e) { return }
         countryNames = arr.map(function(c) { return c.name + " [" + c.iso3 + "]" })
         countryList.clear()
         for (var i = 0; i < arr.length; i++) { countryList.append(arr[i]) }
@@ -31,7 +32,8 @@ Item {
     function makeChoropleth(indicator) {
         root.isLoading = true
         var raw = DemographicsBackend.choropleth(indicator)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { root.isLoading = false; return }
         mapImage.source = "file://" + d.image_path
         indicatorTitle.text = d.title
         legendInfo.text = "Min: " + d.min_val + "  Median: " + d.med_val + "  Max: " + d.max_val
@@ -40,14 +42,16 @@ Item {
 
     function rankCountries(indicator, ascending) {
         var raw = DemographicsBackend.topCountries(indicator, ascending ? "asc" : "desc", 15)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { return }
         rankModel.clear()
         for (var i = 0; i < d.length; i++) { rankModel.append(d[i]) }
     }
 
     function compareCountries(c1, c2, indicator) {
         var raw = DemographicsBackend.compareCountries(c1, c2, indicator)
-        var d = JSON.parse(raw)
+        var d
+        try { d = JSON.parse(raw) } catch(e) { return }
         if (d.image_path) compImage.source = "file://" + d.image_path
     }
 

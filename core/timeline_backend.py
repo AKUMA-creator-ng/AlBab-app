@@ -90,7 +90,8 @@ class TimelineBackend(QObject):
     def loadSample(self, name):
         if name in SAMPLE_TIMELINES:
             self._timeline = json.loads(json.dumps(SAMPLE_TIMELINES[name]))
-            self._next_id = len(self._timeline["events"])
+            max_id = max((int(ev["id"][1:]) for ev in self._timeline["events"] if ev["id"].startswith("e") and ev["id"][1:].isdigit()), default=0)
+            self._next_id = max_id
             return self._emit()
         return self._emit()
 
@@ -123,7 +124,7 @@ class TimelineBackend(QObject):
                     "title": ev.get("title", "Event"),
                     "desc": ev.get("description", ""),
                     "category": ev.get("category", "general"),
-                    "color": "#B48250", "importance": 3
+                    "color": ev.get("color", "#B48250"), "importance": ev.get("importance", 3),
                 })
             self._timeline["events"] = events
             return json.dumps({"ok": True, "count": len(events)})

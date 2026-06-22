@@ -44,6 +44,7 @@ from core.opencode_chat_backend import OpenCodeChatBackend
 from core.user_manager import UserManager
 
 user_manager = UserManager(db=settings_mgr._db)
+user_manager.autoLogin()
 main_backend = MainWindowBackend(settings=settings_mgr, user_manager=user_manager)
 settings_backend = SettingsBackend(settings=settings_mgr, user_manager=user_manager)
 opencode_wd = settings_mgr.data_dir if DEV_MODE else os.path.expanduser("~")
@@ -109,16 +110,22 @@ backends = {
     "MindMapBackend": MindMapBackend(key_rotation=_gemini_key_rotation),
 }
 
+# Cross-backend signal wiring: profile changes flow both ways
+main_backend.profileChanged.connect(settings_backend.settingsChanged.emit)
+settings_backend.settingsChanged.connect(main_backend.profileChanged.emit)
+
 open_chat = backends["OpenCodeBackend"]
 chat_mgr = backends["ChatSessionManager"]
 open_chat.sessionIdReceived.connect(
-    lambda oid: chat_mgr.setOpencodeSessionId(chat_mgr.currentSessionId, oid)
+    lambda sid: chat_mgr.setOpencodeSessionId(chat_mgr.currentSessionId, sid)
 )
 
-# Clean up stale empty sessions (those never renamed from default)
+# Clean up stale empty sessions (those never renamed from default and with zero messages)
 _stale = [s for s in chat_mgr.sessions if s["name"] == "New Chat"]
 for s in _stale:
-    chat_mgr.deleteSession(s["id"])
+    _msgs = settings_mgr._db.get_chat_messages(s["id"])
+    if not _msgs:
+        chat_mgr.deleteSession(s["id"])
 
 for name, backend in backends.items():
     engine.rootContext().setContextProperty(name, backend)
@@ -135,7 +142,23 @@ if not engine.rootObjects():
 
 opencode_backend.startProcess()
 
+def _on_quit():
+    try:
+        opencode_backend.stopProcess()
+        opencode_backend._stop_server()
+        settings_mgr._db.close()
+    except Exception:
+        pass
+
+app.aboutToQuit.connect(_on_quit)
+
 print(f"AlBab{MODE_LABEL} — data dir: {settings_mgr.data_dir}")
 print(f"AlBab{MODE_LABEL} — config: {settings_mgr.path}")
 
-sys.exit(app.exec())
+try:
+    sys.exit(app.exec())
+except SystemExit:
+    raise
+except Exception as e:
+    print(f"Fatal error: {e}", file=sys.stderr)
+    sys.exit(1)

@@ -291,18 +291,21 @@ Item {
                                     spacing: 8
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
+                                        id: userBubble
                                         Layout.maximumWidth: parent.width * 0.8
+                                        Layout.preferredWidth: bubbleText.implicitWidth + 24
+                                        Layout.preferredHeight: bubbleText.implicitHeight + 24
                                         radius: Theme.radiusLg
                                         color: Theme.chipBg
 
                                         Text {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
+                                            id: bubbleText
+                                            anchors.centerIn: parent
+                                            width: userBubble.width - 24
                                             text: model.text
                                             color: Theme.textPrimary
                                             font.pixelSize: Theme.fontSizeMd
                                             wrapMode: Text.Wrap
-                                            width: parent.width
                                         }
                                     }
                                 }
@@ -824,6 +827,7 @@ Item {
                             width: 8; height: 8; radius: 4; color: Theme.accentBlue
                             Layout.alignment: Qt.AlignHCenter
                             SequentialAnimation on opacity {
+                                running: typeof GeminiBackend !== 'undefined' && GeminiBackend.isThinking
                                 loops: Animation.Infinite
                                 NumberAnimation { to: 0.3; duration: 500 }
                                 NumberAnimation { to: 1.0; duration: 500 }
@@ -883,7 +887,10 @@ Item {
         GeminiBackend.setHistory("")
     }
 
-    function onClose() { chatModel.clear(); pendingIdx = -1; isLoading = false }
+    function onClose() {
+        if (typeof GeminiBackend !== 'undefined' && typeof GeminiBackend.stopGeneration === "function") GeminiBackend.stopGeneration()
+        chatModel.clear(); pendingIdx = -1; isLoading = false
+    }
 
     function onExport() { root.exportSession() }
 

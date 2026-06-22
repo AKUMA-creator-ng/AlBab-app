@@ -223,7 +223,7 @@ Item {
                     Text { text: "History (" + history.length + ")"; color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm; font.weight: Font.DemiBold }
                     Item { Layout.fillWidth: true }
                     Rectangle {
-                        width: 50; height: 20; radius: 3; color: "#FFE0D0"
+                        width: 50; height: 20; radius: 3; color: Theme.errorBg
                         Text { anchors.centerIn: parent; text: "Clear"; color: Theme.errorText; font.pixelSize: 10 }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { CalculatorBackend.clearHistory(); history = [] } }
                     }
@@ -237,7 +237,7 @@ Item {
                     spacing: 1
                     delegate: Rectangle {
                         width: parent.width; height: 24
-                        color: index % 2 === 0 ? "#F8F5F0" : "transparent"
+                        color: index % 2 === 0 ? Theme.cardBg : "transparent"
                         radius: 2
                         RowLayout {
                             anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6

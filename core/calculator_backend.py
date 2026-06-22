@@ -55,5 +55,5 @@ class CalculatorBackend(QObject):
                 for r in rows:
                     w.writerow([r.get("expr", ""), r.get("result", ""), r.get("time", "")])
             return True
-        except OSError:
+        except Exception:
             return False

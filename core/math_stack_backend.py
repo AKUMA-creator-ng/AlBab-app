@@ -28,6 +28,8 @@ def _pearson(x, y):
 
 def _ttest_ind(a, b):
     n1, n2 = len(a), len(b)
+    if n1 < 2 or n2 < 2:
+        return 0
     m1, m2 = _mean(a), _mean(b)
     v1, v2 = _variance(a), _variance(b)
     se = math.sqrt(v1 / n1 + v2 / n2)
@@ -73,7 +75,7 @@ class MathStackBackend(QObject):
             m = float(np.mean(arr))
             v = float(np.var(arr, ddof=1))
             s = float(np.std(arr, ddof=1))
-            skew = float(np.mean(((arr - m) / s) ** 3)) * (n / ((n - 1) * (n - 2))) * (n - 1) if s and n > 2 else 0
+            skew = (n / ((n - 1) * (n - 2))) * float(np.sum(((arr - m) / s) ** 3)) if s and n > 2 else 0
             kurt = float(np.mean(((arr - m) / s) ** 4)) - 3 if s else 0
             return json.dumps({
                 "ok": True,
@@ -81,7 +83,7 @@ class MathStackBackend(QObject):
                 "variance": v, "std_dev": s, "min": float(np.min(arr)), "max": float(np.max(arr)),
                 "q1": q1, "q3": q3, "skewness": skew, "kurtosis": kurt,
             })
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, str, result=str)
@@ -100,7 +102,7 @@ class MathStackBackend(QObject):
                 "ok": True, "slope": float(slope), "intercept": float(intercept),
                 "r_squared": float(r2), "correlation": cc,
             })
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, result=str)
@@ -111,7 +113,7 @@ class MathStackBackend(QObject):
             values = data.get("values", [])
             t = _ttest_1samp(values, mu)
             return json.dumps({"ok": True, "t_stat": t, "p_value": 0})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, str, result=str)
@@ -121,7 +123,7 @@ class MathStackBackend(QObject):
             b = json.loads(json_b)
             t = _ttest_ind(a, b)
             return json.dumps({"ok": True, "t_stat": t, "p_value": 0})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, result=str)
@@ -130,7 +132,7 @@ class MathStackBackend(QObject):
             groups = json.loads(json_groups)
             f = _f_oneway(*groups)
             return json.dumps({"ok": True, "f_stat": f, "p_value": 0})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, result=str)
@@ -168,7 +170,7 @@ class MathStackBackend(QObject):
                 return json.dumps({"ok": True, "area": b * b + 2 * b * (b*b/4 + h*h)**0.5, "perimeter": 4 * b, "volume": (1/3) * b * b * h})
             else:
                 return json.dumps({"ok": False, "error": f"Unknown shape: {shape_name}"})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})
 
     @Slot(str, result=str)
@@ -178,5 +180,5 @@ class MathStackBackend(QObject):
             xy1, xy2 = d.get("p1", []), d.get("p2", [])
             dist = math.sqrt((xy2[0] - xy1[0]) ** 2 + (xy2[1] - xy1[1]) ** 2)
             return json.dumps({"ok": True, "distance": dist})
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (json.JSONDecodeError, TypeError, ValueError, ZeroDivisionError, IndexError) as e:
             return json.dumps({"ok": False, "error": str(e)})

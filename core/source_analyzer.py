@@ -20,16 +20,22 @@ class SourceAnalyzer(QObject):
     @Slot(str, str, result=bool)
     def saveSession(self, name: str, jsonData: str) -> bool:
         safe = _safe_session_name(name)
-        if self._db:
-            self._db.save_session(safe, jsonData)
-            return True
+        try:
+            if self._db:
+                self._db.save_session(safe, jsonData)
+                return True
+        except Exception:
+            pass
         return False
 
     @Slot(str, result=str)
     def loadSession(self, name: str) -> str:
         safe = _safe_session_name(name)
-        if self._db:
-            return self._db.load_session(safe)
+        try:
+            if self._db:
+                return self._db.load_session(safe)
+        except Exception:
+            pass
         return json.dumps({"error": "not found"})
 
     @Slot(result=str)
@@ -41,9 +47,12 @@ class SourceAnalyzer(QObject):
     @Slot(str, result=bool)
     def deleteSession(self, name: str) -> bool:
         safe = _safe_session_name(name)
-        if self._db:
-            self._db.delete_session(safe)
-            return True
+        try:
+            if self._db:
+                self._db.delete_session(safe)
+                return True
+        except Exception:
+            pass
         return False
 
     @Slot(str, str, result=bool)
@@ -84,7 +93,10 @@ td:first-child{{font-weight:bold;width:120px;color:#666;}}
 
     @Slot(str, result=str)
     def generateAiPrompt(self, jsonData):
-        data = json.loads(jsonData)
+        try:
+            data = json.loads(jsonData)
+        except (json.JSONDecodeError, TypeError) as e:
+            return json.dumps({"error": str(e)})
         prompt = (
             f"Analyze the following {'primary' if data.get('type') == 'Primary' else 'secondary'} source "
             f"as a history student would.\n\n"

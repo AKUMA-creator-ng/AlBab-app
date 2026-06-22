@@ -13,7 +13,7 @@ Item {
     property string saveMsg: ""
     property string apiKeyMsg: ""
     property string apiKeyTestMsg: ""
-    property string apiKeyField: GeminiBackend.apiKey || ""
+    property string apiKeyField: (typeof GeminiBackend !== 'undefined' ? GeminiBackend.apiKey : "") || ""
     property var settingsModel: [
         { label: "Language", value: SettingsBackend.language || "English" },
         { label: "Theme", value: Theme.darkMode ? "Dark Glass" : "Frosted Glass" },
@@ -108,10 +108,10 @@ Item {
                             Layout.fillWidth: true; Layout.preferredHeight: 30; radius: Theme.radiusSm; color: "#8CFFFFFF"
                             border.color: "#0F000000"
                             TextInput {
+                                id: editFirstInput
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
                                 color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                                 verticalAlignment: TextInput.AlignVCenter
-                                text: root.editFirst
                                 onTextChanged: root.editFirst = text
                                 selectByMouse: true
                                 activeFocusOnTab: true
@@ -126,10 +126,10 @@ Item {
                             Layout.fillWidth: true; Layout.preferredHeight: 30; radius: Theme.radiusSm; color: "#8CFFFFFF"
                             border.color: "#0F000000"
                             TextInput {
+                                id: editLastInput
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
                                 color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                                 verticalAlignment: TextInput.AlignVCenter
-                                text: root.editLast
                                 onTextChanged: root.editLast = text
                                 selectByMouse: true
                                 activeFocusOnTab: true
@@ -144,10 +144,10 @@ Item {
                             Layout.fillWidth: true; Layout.preferredHeight: 30; radius: Theme.radiusSm; color: "#8CFFFFFF"
                             border.color: "#0F000000"
                             TextInput {
+                                id: editFacultyInput
                                 anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
                                 color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                                 verticalAlignment: TextInput.AlignVCenter
-                                text: root.editFaculty
                                 onTextChanged: root.editFaculty = text
                                 selectByMouse: true
                                 activeFocusOnTab: true
@@ -176,6 +176,12 @@ Item {
                                     root.saveMsg = "Profile saved"
                                     saveTimer.start()
                                 } else {
+                                    root.editFirst = UserManager.currentFirstName
+                                    root.editLast = UserManager.currentLastName
+                                    root.editFaculty = UserManager.currentFaculty
+                                    editFirstInput.text = root.editFirst
+                                    editLastInput.text = root.editLast
+                                    editFacultyInput.text = root.editFaculty
                                     root.isEditing = true
                                 }
                             }
@@ -410,12 +416,12 @@ Item {
                             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                             color: Theme.textPrimary; font.pixelSize: Theme.fontSizeSm
                             verticalAlignment: TextInput.AlignVCenter
-                            text: root.apiKeyField
                             echoMode: TextInput.Password
                             onTextChanged: root.apiKeyField = text
                             selectByMouse: true
                             activeFocusOnTab: true
                             Accessible.name: "Gemini API key"
+                            Component.onCompleted: text = root.apiKeyField
                         }
                     }
                     Rectangle {

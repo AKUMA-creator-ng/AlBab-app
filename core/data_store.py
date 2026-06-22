@@ -16,24 +16,36 @@ class DataStore(QObject):
 
     @Slot(str, str)
     def save(self, key: str, json_data: str) -> None:
-        if self._db:
-            self._db.kv_save(self._safe_key(key), json_data)
-            self.dataChanged.emit(key)
+        try:
+            if self._db:
+                self._db.kv_save(self._safe_key(key), json_data)
+                self.dataChanged.emit(key)
+        except Exception:
+            pass
 
     @Slot(str, result=str)
     def load(self, key: str) -> str:
-        if self._db:
-            return self._db.kv_load(self._safe_key(key), "[]")
+        try:
+            if self._db:
+                return self._db.kv_load(self._safe_key(key), "[]")
+        except Exception:
+            pass
         return "[]"
 
     @Slot(str)
     def remove(self, key: str) -> None:
-        if self._db:
-            self._db.kv_remove(self._safe_key(key))
-            self.dataChanged.emit(key)
+        try:
+            if self._db:
+                self._db.kv_remove(self._safe_key(key))
+                self.dataChanged.emit(key)
+        except Exception:
+            pass
 
     @Slot(str, result=bool)
     def exists(self, key: str) -> bool:
-        if self._db:
-            return self._db.kv_exists(self._safe_key(key))
+        try:
+            if self._db:
+                return self._db.kv_exists(self._safe_key(key))
+        except Exception:
+            pass
         return False

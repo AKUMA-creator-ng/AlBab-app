@@ -33,7 +33,7 @@ class OpencodeProcess(QObject):
 
     def __init__(self, working_dir=None, parent=None):
         super().__init__(parent)
-        self._running = True
+        self._running = False
         self._is_processing = False
         self._working_dir = working_dir or os.path.expanduser("~")
         self._current_proc = None
@@ -76,14 +76,15 @@ class OpencodeProcess(QObject):
             pass
 
     def _start_server(self):
-        if self._server_proc and self._server_proc.poll() is None:
-            return True
+        with self._lock:
+            if self._server_proc and self._server_proc.poll() is None:
+                return True
 
         self._server_port = _find_free_port()
 
         kwargs = {
-            "stdout": subprocess.PIPE,
-            "stderr": subprocess.PIPE,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
             "cwd": self._working_dir,
             "bufsize": 0,
         }
@@ -242,9 +243,13 @@ class OpencodeProcess(QObject):
                 self._emit_safe(self.outputReceived, f"[AlBab] Timed out ({timeout}s).\n")
                 self._finish()
             except FileNotFoundError:
+                with self._lock:
+                    self._current_proc = None
                 self._emit_safe(self.outputReceived, "[AlBab] opencode not found in bin/.\n")
                 self._finish()
             except Exception as e:
+                with self._lock:
+                    self._current_proc = None
                 self._emit_safe(self.outputReceived, f"[AlBab] Error: {e}\n")
                 self._finish()
 

@@ -339,7 +339,7 @@ class GeminiBackend(QObject):
                     return
 
                 response = self._retry_with_backoff(
-                    lambda: self._chat.send_message(text)
+                    lambda chat=self._chat: chat.send_message(text)
                 )
                 if response is None:
                     raise Exception("Message send failed after retries")
@@ -403,8 +403,11 @@ class GeminiBackend(QObject):
         self._api_key = key
         if self._key_rotation and key:
             self._key_rotation.add_key(key)
-        self._init_client()
         self.statusChanged.emit("key_updated")
+        def _init_thread():
+            self._init_client()
+            self.statusChanged.emit("key_updated")
+        threading.Thread(target=_init_thread, daemon=True).start()
 
     @Slot(str)
     def setUserContext(self, context: str):
@@ -413,9 +416,14 @@ class GeminiBackend(QObject):
 
     @Slot(str)
     def setHistory(self, messages_json: str):
-        self._history_messages = json.loads(messages_json) if messages_json else []
+        try:
+            self._history_messages = json.loads(messages_json) if messages_json else []
+        except (json.JSONDecodeError, TypeError):
+            self._history_messages = []
         self._context_dirty = False
-        self._init_client(history=self._history_messages)
+        def _init_thread():
+            self._init_client(history=self._history_messages)
+        threading.Thread(target=_init_thread, daemon=True).start()
 
     @Slot(result=bool)
     def checkOnline(self) -> bool:

@@ -126,7 +126,7 @@ ApplicationWindow {
                 var ctx = "The user is " + UserManager.currentFirstName + " " + UserManager.currentLastName
                     + ", studying at " + UserManager.currentFaculty
                     + " (email: " + UserManager.currentEmail + ")."
-                OpencodeBackend.sendInput("SYSTEM: Remember this user context for this session: " + ctx)
+                OpenCodeBackend.sendInput("SYSTEM: Remember this user context for this session: " + ctx)
                 if (typeof OpenCodeBackend !== 'undefined' && typeof OpenCodeBackend.setUserContext === "function") OpenCodeBackend.setUserContext(ctx)
                 if (typeof GeminiBackend !== 'undefined' && typeof GeminiBackend.setUserContext === "function") GeminiBackend.setUserContext(ctx)
             }
@@ -137,7 +137,6 @@ ApplicationWindow {
         id: aboutDialog
         title: "About AlBab"
         modal: true
-        anchors.centerIn: parent
         width: 360
         ColumnLayout {
             anchors.fill: parent
