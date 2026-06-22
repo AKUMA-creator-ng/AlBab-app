@@ -138,7 +138,7 @@ class ChatSessionManager(QObject):
 
     @Slot(str, int, result=int)
     def lastUserMessageId(self, session_id: str, before_id: int) -> int:
-        return self._db.get_last_user_message_id(session_id, before_id) or 0
+        return self._db.get_last_user_message_id(session_id, before_id) or -1
 
     @Slot(str, int, str, result=int)
     def updateMessage(self, session_id: str, msg_id: int, content: str) -> int:

@@ -130,7 +130,11 @@ class DemographicsBackend(QObject):
         for c in countries:
             val = c.get(key, 0)
             norm = (val - vmin) / (vmax - vmin) if vmax > vmin else 0.5
-            color = self._plt.cm.get_cmap(colormap)(norm)
+            try:
+                cmap = self._plt.colormaps[colormap]
+            except (AttributeError, KeyError):
+                cmap = self._plt.cm.get_cmap(colormap)
+            color = cmap(norm)
             if c["geometry"]:
                 ax.add_geometries([c["geometry"]], crs=self._get_projection(), facecolor=color, edgecolor="#333333", linewidth=0.2)
         ax.set_title(title, fontsize=14)

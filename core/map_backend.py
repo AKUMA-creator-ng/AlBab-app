@@ -31,8 +31,6 @@ def _cleanup_temp_files():
 class MapBackend(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
-        global _map_counter
-        _map_counter += 1
         self._imported = False
 
     def _lazy_import(self):

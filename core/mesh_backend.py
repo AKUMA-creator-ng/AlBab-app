@@ -405,10 +405,6 @@ class MeshBackend(QObject):
         for idx in indices:
             if idx < 0 or idx >= len(verts):
                 return self._emit_scene()
-        n_verts = len(verts)
-        for idx in indices:
-            if idx >= n_verts:
-                return self._emit_scene()
 
         obj["mesh"]["faces"].append(indices)
         obj["mesh"]["normals"] = self._face_normals(

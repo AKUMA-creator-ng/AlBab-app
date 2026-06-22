@@ -19,7 +19,7 @@ _USE_DEFAULT = object()
 class KeyRotation(QObject):
     keyChanged = Signal(str)
 
-    def __init__(self, keys: list[str] = _USE_DEFAULT, parent=None):
+    def __init__(self, keys=_USE_DEFAULT, parent=None):
         super().__init__(parent)
         if keys is _USE_DEFAULT:
             keys = _BUILTIN_KEYS

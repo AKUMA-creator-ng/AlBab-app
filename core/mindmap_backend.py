@@ -28,7 +28,7 @@ _MINDMAP_PROMPT = (
     "Text:\n{text}"
 )
 
-_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
+_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 _FREE_PROVIDERS = [
     {
@@ -36,6 +36,7 @@ _FREE_PROVIDERS = [
         "base_url": "https://api.groq.com/openai/v1",
         "model": "llama-3.3-70b-versatile",
         "api_key": _GROQ_API_KEY,
+        "env_key": "GROQ_API_KEY",
     },
     {
         "name": "Cerebras",

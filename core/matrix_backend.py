@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import numpy as np
 from PySide6.QtCore import QObject, Slot

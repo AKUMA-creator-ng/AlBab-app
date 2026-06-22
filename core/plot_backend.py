@@ -147,7 +147,6 @@ class PlotBackend(QObject):
         ax.set_title(expression, fontsize=11, fontweight="bold")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        fig.tight_layout()
 
         url = _save_fig(fig, "plot2d")
         self.plotUpdated.emit(url)
@@ -175,8 +174,6 @@ class PlotBackend(QObject):
         ax.set_title(expression, fontsize=11, fontweight="bold")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        fig.tight_layout()
-
         url = _save_fig(fig, "plot2d")
         self.plotUpdated.emit(url)
         return url
@@ -221,7 +218,6 @@ class PlotBackend(QObject):
         ax.set_title(expression, fontsize=11, fontweight="bold")
         ax.view_init(elev=elevation, azim=azimuth)
         fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20)
-        fig.tight_layout()
 
         url = _save_fig(fig, "plot3d")
         self.plotUpdated.emit(url)
@@ -478,8 +474,6 @@ class PlotBackend(QObject):
         ax.set_xlim(-max_dim, max_dim)
         ax.set_ylim(-max_dim, max_dim)
         ax.set_zlim(-max_dim, max_dim)
-        fig.tight_layout()
-
         url = _save_fig(fig, "shape3d")
         self.plotUpdated.emit(url)
         return url
@@ -588,7 +582,6 @@ class PlotBackend(QObject):
         ax.set_zlabel("z", fontsize=9)
         ax.set_title(expression, fontsize=11, fontweight="bold")
         fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20)
-        fig.tight_layout()
 
         url = _save_fig(fig, "plot3d")
         self.plotUpdated.emit(url)

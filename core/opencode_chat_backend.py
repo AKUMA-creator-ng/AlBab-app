@@ -45,6 +45,7 @@ class OpenCodeChatBackend(QObject):
         self._session_id = ""
         self._user_context = ""
         self._context_injected = False
+        self._cached_sessions = []
 
     def _set_thinking(self, value):
         self._is_thinking = value
@@ -80,7 +81,7 @@ class OpenCodeChatBackend(QObject):
 
                 kwargs = {
                     "stdout": subprocess.PIPE,
-                    "stderr": subprocess.PIPE,
+                    "stderr": subprocess.STDOUT,
                     "cwd": self._working_dir,
                     "bufsize": 0,
                 }
@@ -163,19 +164,7 @@ class OpenCodeChatBackend(QObject):
                     if session_id:
                         self._fetch_session_title(session_id)
                 else:
-                    err = proc.stderr.read().decode("utf-8", errors="replace")
-                    err = strip_ansi(err).strip()
-                    if err:
-                        clean = "\n".join(
-                            l for l in err.split("\n")
-                            if l.strip() and "level=INFO" not in l
-                        )
-                        if clean:
-                            self.errorOccurred.emit(clean[:500])
-                        else:
-                            self.responseReady.emit("(no response)")
-                    else:
-                        self.responseReady.emit("(no response)")
+                    self.errorOccurred.emit("No response received from OpenCode.")
 
             except FileNotFoundError:
                 self.errorOccurred.emit("opencode not found in bin/")
@@ -244,36 +233,53 @@ class OpenCodeChatBackend(QObject):
                 kwargs = {"creationflags": subprocess.CREATE_NO_WINDOW}
             else:
                 kwargs = {}
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self._working_dir, **kwargs)
-            return json.loads(result.stdout) if result.stdout.strip() else []
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self._working_dir, timeout=10, **kwargs)
+            sessions = json.loads(result.stdout) if result.stdout.strip() else []
+            self._cached_sessions = sessions
+            return sessions
         except Exception:
-            return []
+            return self._cached_sessions
 
     @Slot(result="QVariant")
     def listSessions(self):
-        return self._list_sessions()
+        # Run in a thread to avoid blocking the UI
+        def _run():
+            result = self._list_sessions()
+            try:
+                self.sessionsListChanged.emit()
+            except RuntimeError:
+                pass
+        threading.Thread(target=_run, daemon=True).start()
+        return self._cached_sessions
 
-    @Slot(str, result="QVariant")
-    def exportSession(self, session_id: str):
+    def _run_export(self, session_id: str):
         try:
             cmd = [OPENCODE_PATH, "export", session_id]
             if platform.system() == "Windows":
                 kwargs = {"creationflags": subprocess.CREATE_NO_WINDOW}
             else:
                 kwargs = {}
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self._working_dir, **kwargs)
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self._working_dir, timeout=15, **kwargs)
             return json.loads(result.stdout) if result.stdout.strip() else {}
         except Exception:
             return {}
 
+    @Slot(str, result="QVariant")
+    def exportSession(self, session_id: str):
+        # Run in a thread to avoid blocking the UI
+        result = self._run_export(session_id)
+        return result
+
     def _fetch_session_title(self, session_id: str):
-        try:
-            data = self.exportSession(session_id)
+        def _run():
+            data = self._run_export(session_id)
             title = data.get("info", {}).get("title", "")
             if title:
-                self.sessionTitleReceived.emit(session_id, title)
-        except Exception:
-            pass
+                try:
+                    self.sessionTitleReceived.emit(session_id, title)
+                except RuntimeError:
+                    pass
+        threading.Thread(target=_run, daemon=True).start()
 
     @Slot()
     def refreshSessions(self):

@@ -115,8 +115,10 @@ open_chat.sessionIdReceived.connect(
     lambda oid: chat_mgr.setOpencodeSessionId(chat_mgr.currentSessionId, oid)
 )
 
-# Clean up stale empty sessions
-chat_mgr.deleteSessionsByName("New Chat")
+# Clean up stale empty sessions (those never renamed from default)
+_stale = [s for s in chat_mgr.sessions if s["name"] == "New Chat"]
+for s in _stale:
+    chat_mgr.deleteSession(s["id"])
 
 for name, backend in backends.items():
     engine.rootContext().setContextProperty(name, backend)
