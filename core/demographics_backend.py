@@ -125,7 +125,7 @@ class DemographicsBackend(QObject):
         key = key_map.get(indicator, "pop")
         countries = _mem_cache.get("countries", [])
         values = [c.get(key, 0) for c in countries]
-        vmin, vmax = min(values), max(values) if values else 1
+        vmin, vmax = (min(values), max(values)) if values else (0, 1)
         fig, ax = self._plt.subplots(1, 1, figsize=(14, 8), subplot_kw={"projection": self._get_projection()})
         for c in countries:
             val = c.get(key, 0)

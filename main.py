@@ -26,6 +26,7 @@ engine = QQmlApplicationEngine()
 engine.setOutputWarningsToStandardError(True)
 
 _data_root = os.path.join(os.path.expanduser("~"), ".albab") if not DEV_MODE else os.path.join(os.path.dirname(__file__), "data-dev")
+os.makedirs(_data_root, exist_ok=True)
 settings_mgr = SettingsManager(
     db=DatabaseManager(db_path=os.path.join(_data_root, "app.db")),
     dev_mode=DEV_MODE,
@@ -35,8 +36,6 @@ settings_mgr._db.migrate_from_json(
     settings_path=os.path.join(os.path.dirname(__file__), "settings.dev.json" if DEV_MODE else "settings.json"),
     users_path=os.path.join(os.path.dirname(__file__), "data-dev" if DEV_MODE else "data", "users.json"),
 )
-
-os.makedirs(_data_root, exist_ok=True)
 
 from windows.main_window import MainWindowBackend
 from windows.settings_window import SettingsBackend
@@ -71,7 +70,6 @@ from core.map_backend import MapBackend
 from core.undo_manager import UndoManager
 from core.calculator_backend import CalculatorBackend
 from core.export_backend import ExportBackend
-from core.user_manager import UserManager
 from core.gemini_backend import GeminiBackend
 from core.data_store import DataStore
 from core.formula_library_backend import FormulaLibraryBackend

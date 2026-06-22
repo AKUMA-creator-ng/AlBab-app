@@ -90,11 +90,17 @@ def _format_number(v):
     if isinstance(v, float):
         if math.isnan(v) or math.isinf(v):
             return "Error"
-        if v == int(v):
-            return str(int(v))
+        try:
+            if v == int(v):
+                return str(int(v))
+        except (OverflowError, ValueError):
+            return str(v)
         s = round(v, 12)
-        if s == int(s):
-            return str(int(s))
+        try:
+            if s == int(s):
+                return str(int(s))
+        except (OverflowError, ValueError):
+            return str(s)
         return str(s)
     return str(v)
 

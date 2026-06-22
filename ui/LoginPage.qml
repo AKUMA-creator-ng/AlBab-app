@@ -6,7 +6,7 @@ Item {
     id: root
     signal loginSuccess()
 
-    property bool isRegistering: true
+    property bool isRegistering: !UserManager.hasAnyUsers()
     property string errorMsg: ""
 
     ColumnLayout {

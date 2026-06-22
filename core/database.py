@@ -9,7 +9,9 @@ class DatabaseManager:
         self._db_path = db_path
         self._lock = threading.Lock()
         if db_path != ":memory:":
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            dirn = os.path.dirname(db_path)
+            if dirn:
+                os.makedirs(dirn, exist_ok=True)
         self._conn = sqlite3.connect(db_path, timeout=10, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -361,6 +363,16 @@ class DatabaseManager:
             )
             self._conn.commit()
 
+    def update_chat_message_tokens(self, session_id: str, content: str, tokens_input: int, tokens_output: int):
+        with self._lock:
+            self._conn.execute(
+                "UPDATE chat_messages SET tokens_input=?, tokens_output=? "
+                "WHERE session_id=? AND role='ai' AND content=? "
+                "ORDER BY id DESC LIMIT 1",
+                (tokens_input, tokens_output, session_id, content)
+            )
+            self._conn.commit()
+
     def get_last_user_message_id(self, session_id: str, before_id: int):
         with self._lock:
             row = self._conn.execute(
@@ -368,6 +380,12 @@ class DatabaseManager:
                 (session_id, before_id)
             ).fetchone()
             return row["id"] if row else None
+
+    def __del__(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
 
     def close(self):
         self._conn.close()

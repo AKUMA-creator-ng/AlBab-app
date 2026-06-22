@@ -28,7 +28,7 @@ _MINDMAP_PROMPT = (
     "Text:\n{text}"
 )
 
-_GROQ_API_KEY = "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"
+_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
 
 _FREE_PROVIDERS = [
     {
@@ -338,6 +338,7 @@ class MindMapBackend(QObject):
                     return None
                 except ResourceExhausted:
                     if self._key_rotation and self._key_rotation.has_keys:
+                        self._key_rotation.mark_failure()
                         self._key_rotation.rotate()
                         self._api_key = self._key_rotation.current
                         self._init_gemini()

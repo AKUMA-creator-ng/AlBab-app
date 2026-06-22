@@ -242,7 +242,7 @@ class OpencodeProcess(QObject):
                 self._emit_safe(self.outputReceived, f"[AlBab] Timed out ({timeout}s).\n")
                 self._finish()
             except FileNotFoundError:
-                self._emit_safe(self.outputReceived, "[AlBab] opencode.exe not found.\n")
+                self._emit_safe(self.outputReceived, "[AlBab] opencode not found in bin/.\n")
                 self._finish()
             except Exception as e:
                 self._emit_safe(self.outputReceived, f"[AlBab] Error: {e}\n")

@@ -31,7 +31,7 @@ class ExportBackend(QObject):
                 f.write(data)
             self.exportComplete.emit(path, True)
             return True
-        except (json.JSONDecodeError, OSError) as e:
+        except OSError as e:
             self.exportComplete.emit(str(e), False)
             return False
 

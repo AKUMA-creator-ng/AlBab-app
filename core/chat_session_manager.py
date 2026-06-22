@@ -110,7 +110,7 @@ class ChatSessionManager(QObject):
 
     @Slot(str, str, int, int)
     def updateAiTokens(self, session_id: str, content: str, tokens_input: int = 0, tokens_output: int = 0):
-        self._db.add_chat_message(session_id, "ai", content, "", tokens_input, tokens_output)
+        self._db.update_chat_message_tokens(session_id, content, tokens_input, tokens_output)
         self._db.touch_chat_session(session_id)
 
     @Slot(str, str)

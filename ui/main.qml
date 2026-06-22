@@ -127,8 +127,8 @@ ApplicationWindow {
                     + ", studying at " + UserManager.currentFaculty
                     + " (email: " + UserManager.currentEmail + ")."
                 OpencodeBackend.sendInput("SYSTEM: Remember this user context for this session: " + ctx)
-                OpenCodeBackend.setUserContext(ctx)
-                GeminiBackend.setUserContext(ctx)
+                if (typeof OpenCodeBackend !== 'undefined' && typeof OpenCodeBackend.setUserContext === "function") OpenCodeBackend.setUserContext(ctx)
+                if (typeof GeminiBackend !== 'undefined' && typeof GeminiBackend.setUserContext === "function") GeminiBackend.setUserContext(ctx)
             }
         }
     }
@@ -190,7 +190,8 @@ ApplicationWindow {
                     Text {
                         text: pageStack.currentIndex === 0 ? "Home" :
                               pageStack.currentIndex === 1 ? "AI Chat" :
-                              pageStack.currentIndex === 2 ? "Tools" : "Settings"
+                              pageStack.currentIndex === 2 ? "Tools" :
+                              pageStack.currentIndex === 3 ? "Settings" : "AlBab"
                         color: Theme.textPrimary
                         font.pixelSize: Theme.fontSizeLg
                         font.weight: Font.DemiBold

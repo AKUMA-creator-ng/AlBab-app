@@ -546,7 +546,7 @@ Item {
                     anchors.leftMargin: 12; anchors.rightMargin: 12
 
                     Text {
-                        text: "Scroll to zoom \u2022 Right-click nodes to collapse \u2022 Drag nodes to reposition"
+                        text: "Scroll to zoom \u2022 Click nodes to expand/collapse \u2022 Drag nodes to reposition"
                         color: Theme.textMuted
                         font.pixelSize: 9
                         Layout.fillWidth: true

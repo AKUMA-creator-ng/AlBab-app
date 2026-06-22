@@ -13,6 +13,8 @@ _BUILTIN_KEYS = [
     "PLACEHOLDER_KEY_8",
 ]
 
+_USE_DEFAULT = object()
+
 
 class KeyRotation(QObject):
     keyChanged = Signal(str)

@@ -54,8 +54,8 @@ class GeminiBackend(QObject):
                     raise
                 if self._key_rotation:
                     old_idx = self._key_rotation.currentIndex
-                    self._key_rotation.rotate()
                     self._key_rotation.mark_failure()
+                    self._key_rotation.rotate()
                     self._api_key = self._key_rotation.current
                     rotated = self._key_rotation.currentIndex != old_idx
                     if rotated:
@@ -280,7 +280,9 @@ class GeminiBackend(QObject):
             elif name == "write_file":
                 path = args.get("path", "")
                 content = args.get("content", "")
-                os.makedirs(os.path.dirname(path), exist_ok=True)
+                dirn = os.path.dirname(path)
+                if dirn:
+                    os.makedirs(dirn, exist_ok=True)
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(content)
                 return f"File written to {path}"
@@ -327,7 +329,7 @@ class GeminiBackend(QObject):
         def run():
             try:
                 if self._context_dirty:
-                    self._init_client()
+                    self._init_client(history=self._history_messages)
                     self._context_dirty = False
                 if not self._client or not self._chat:
                     self._init_client()

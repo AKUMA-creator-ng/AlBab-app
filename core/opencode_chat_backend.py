@@ -178,7 +178,7 @@ class OpenCodeChatBackend(QObject):
                         self.responseReady.emit("(no response)")
 
             except FileNotFoundError:
-                self.errorOccurred.emit("opencode.exe not found in bin/")
+                self.errorOccurred.emit("opencode not found in bin/")
             except Exception as e:
                 self.errorOccurred.emit(f"Error: {str(e)}")
             finally:

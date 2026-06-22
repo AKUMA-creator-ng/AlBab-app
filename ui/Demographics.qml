@@ -32,7 +32,7 @@ Item {
         root.isLoading = true
         var raw = DemographicsBackend.choropleth(indicator)
         var d = JSON.parse(raw)
-        mapImage.source = "file:///" + d.image_path
+        mapImage.source = "file://" + d.image_path
         indicatorTitle.text = d.title
         legendInfo.text = "Min: " + d.min_val + "  Median: " + d.med_val + "  Max: " + d.max_val
         root.isLoading = false
@@ -48,7 +48,7 @@ Item {
     function compareCountries(c1, c2, indicator) {
         var raw = DemographicsBackend.compareCountries(c1, c2, indicator)
         var d = JSON.parse(raw)
-        if (d.image_path) compImage.source = "file:///" + d.image_path
+        if (d.image_path) compImage.source = "file://" + d.image_path
     }
 
     function indicatorLabel(ind) {

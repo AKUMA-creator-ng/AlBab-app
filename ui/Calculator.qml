@@ -225,7 +225,7 @@ Item {
                     Rectangle {
                         width: 50; height: 20; radius: 3; color: "#FFE0D0"
                         Text { anchors.centerIn: parent; text: "Clear"; color: Theme.errorText; font.pixelSize: 10 }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: CalculatorBackend.clearHistory() }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { CalculatorBackend.clearHistory(); history = [] } }
                     }
                 }
 
@@ -356,7 +356,7 @@ Item {
                     { t: "0", w: 2 }, { t: "." }, { t: "=", c: Theme.accentCopper, fn: pressEq },
                 ]
                 Rectangle {
-                    width: (parent.width - Theme.spacingXs * (modelData.w || 1)) / (4 / (modelData.w || 1)) - (Theme.spacingXs * ((modelData.w || 1) - 1))
+                    width: modelData.w === 2 ? (parent.width - Theme.spacingXs * 2) / 2 : (parent.width - Theme.spacingXs * 3) / 4
                     height: 40
                     radius: Theme.radiusSm
                     color: modelData.c || "#FFFFFF"
@@ -409,12 +409,12 @@ Item {
             spacing: Theme.spacingXs
             Repeater {
                 model: [
-                    { t: "sin", c: "#E4DED8" }, { t: "cos", c: "#E4DED8" }, { t: "tan", c: "#E4DED8" },
-                    { t: "log", c: "#E4DED8" }, { t: "ln", c: "#E4DED8" },
+                    { t: "sin", c: "#E4DED8", tt: "sin(" }, { t: "cos", c: "#E4DED8", tt: "cos(" }, { t: "tan", c: "#E4DED8", tt: "tan(" },
+                    { t: "log", c: "#E4DED8", tt: "log(" }, { t: "ln", c: "#E4DED8", tt: "ln(" },
                     { t: "\u221A", c: "#E4DED8", tt: "sqrt(" },
                     { t: "x\u00B2", c: "#E4DED8", tt: "^2" },
                     { t: "x\u02B8", c: "#E4DED8", tt: "^" },
-                    { t: "(", c: "#E4DED8" }, { t: ")", c: "#E4DED8" },
+                    { t: "(", c: "#E4DED8", tt: "(" }, { t: ")", c: "#E4DED8", tt: ")" },
                     { t: "\u03C0", c: "#E4DED8", tt: "pi" },
                     { t: "e", c: "#E4DED8", tt: "e" },
                 ]

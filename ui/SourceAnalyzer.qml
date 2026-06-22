@@ -162,7 +162,7 @@ Item {
                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         var prompt = SourceAnalyzer.generateAiPrompt(gatherData())
-                        GeminiBackend.sendMessage(prompt)
+                        if (typeof GeminiBackend !== 'undefined') GeminiBackend.sendMessage(prompt)
                     }
                 }
             }
