@@ -629,26 +629,6 @@ Item {
                         allowDrag = false
                         scrollFlickable.interactive = true
                     }
-                }
-                        if (wasDragged) {
-                            var keys = Object.keys(allNodes)
-                            if (index < keys.length) {
-                                var nid = keys[index]
-                                var origPos = nodePositions[nid]
-                                if (origPos) {
-                                    var newX = (nodeRect.x + nodeRect.width / 2) / zoomLevel
-                                    var newY = (nodeRect.y + nodeRect.height / 2) / zoomLevel
-                                    dragOffsets[nid] = {
-                                        x: newX - origPos.x + (dragOffsets[nid] ? dragOffsets[nid].x : 0),
-                                        y: newY - origPos.y + (dragOffsets[nid] ? dragOffsets[nid].y : 0)
-                                    }
-                                    nodePositions[nid].x = newX
-                                    nodePositions[nid].y = newY
-                                    canvas.requestPaint()
-                                }
-                            }
-                        }
-                    }
 
                     onEntered: { nodeRect.scale = 1.03 }
                     onExited: { nodeRect.scale = 1.0; tooltip.visible = false }
