@@ -416,7 +416,20 @@ Item {
         mindMapWindow.close()
     }
 
-    function onExport() {}
+    function onExport() {
+        if (typeof ExportBackend !== 'undefined' && typeof PlotBackend !== 'undefined') {
+            var exportPath = ExportBackend.getExportPath("mindmap", "png")
+            if (exportPath) {
+                // Use grabToImage on the canvas
+                mindMapCanvas.forceRepaint()
+                // Export via Python
+                ExportBackend.exportText("mindmap_data.json", JSON.stringify(mindMapWindow.pendingTreeData, null, 2))
+                statusLabel.text = "Mind map data exported as JSON"
+                statusLabel.color = Theme.accentBlue
+                statusTimer.start()
+            }
+        }
+    }
 
     Dialog {
         id: mindMapWindow
@@ -433,7 +446,7 @@ Item {
             if (pendingTreeData) {
                 mindMapCanvas.buildTree(pendingTreeData)
                 Qt.callLater(function() {
-                    mindMapCanvas.centerView()
+                    mindMapCanvas.fitToView()
                     mindMapCanvas.forceRepaint()
                 })
             }
@@ -483,6 +496,25 @@ Item {
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    Rectangle {
+                        height: 28; radius: 14
+                        color: fitMouse2.containsMouse ? Theme.chipBg : Theme.inputBg
+                        border.color: Theme.divider
+                        implicitWidth: fitRow.implicitWidth + 16
+                        Row {
+                            id: fitRow
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Text { text: "\u25A1"; font.pixelSize: 12; color: Theme.textSecondary }
+                            Text { text: "Fit"; color: Theme.textSecondary; font.pixelSize: Theme.fontSizeXs }
+                        }
+                        MouseArea {
+                            id: fitMouse2
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
+                            onClicked: mindMapCanvas.fitToView()
+                        }
+                    }
 
                     Rectangle {
                         height: 28; radius: 14
@@ -548,7 +580,7 @@ Item {
                     anchors.leftMargin: 12; anchors.rightMargin: 12
 
                     Text {
-                        text: "Scroll to zoom \u2022 Click nodes to expand/collapse \u2022 Drag nodes to reposition"
+                        text: "Scroll to zoom \u2022 Click to expand/collapse \u2022 Drag to move \u2022 Hover for details"
                         color: Theme.textMuted
                         font.pixelSize: 9
                         Layout.fillWidth: true
