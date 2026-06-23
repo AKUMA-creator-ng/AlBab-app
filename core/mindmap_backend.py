@@ -60,25 +60,7 @@ _FREE_PROVIDERS = [
         "name": "Groq",
         "base_url": "https://api.groq.com/openai/v1",
         "model": "llama-3.3-70b-versatile",
-        "env_key": "GROQ_API_KEY",
-    },
-    {
-        "name": "Cerebras",
-        "base_url": "https://api.cerebras.ai/v1",
-        "model": "llama-3.3-70b",
-        "env_key": "CEREBRAS_API_KEY",
-    },
-    {
-        "name": "OpenRouter",
-        "base_url": "https://openrouter.ai/api/v1",
-        "model": "meta-llama/llama-3.3-70b-instruct:free",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    {
-        "name": "Mistral",
-        "base_url": "https://api.mistral.ai/v1",
-        "model": "mistral-small-latest",
-        "env_key": "MISTRAL_API_KEY",
+        "api_key": "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",
     },
 ]
 
@@ -461,7 +443,7 @@ class MindMapBackend(QObject):
                 self._emit_result(result, gen_id)
                 return
 
-            else:  # auto mode
+            else:  # auto mode — Groq only, no Gemini
                 for provider in _FREE_PROVIDERS:
                     if gen_id != self._gen_id:
                         return
@@ -469,14 +451,6 @@ class MindMapBackend(QObject):
                     result = self._try_openai_provider(provider, prompt)
                     if result and self._emit_result(result, gen_id):
                         return
-
-                # Try Gemini last
-                if gen_id != self._gen_id:
-                    return
-                self.statusChanged.emit("Trying Gemini AI...")
-                result = self._try_gemini(prompt, gen_id)
-                if result and self._emit_result(result, gen_id):
-                    return
 
                 # Local fallback
                 self.statusChanged.emit("Generating locally...")
@@ -540,9 +514,7 @@ class MindMapBackend(QObject):
         return None
 
     def _try_openai_provider(self, provider, prompt):
-        # These providers (Groq, Cerebras, etc.) use their own API keys from env
-        # (separate from the Gemini key rotation system)
-        api_key = os.environ.get(provider.get("env_key", ""), "")
+        api_key = provider.get("api_key", "") or os.environ.get(provider.get("env_key", ""), "")
         if not api_key or not _HAS_OPENAI:
             return None
 

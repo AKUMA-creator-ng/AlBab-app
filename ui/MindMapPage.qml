@@ -12,8 +12,8 @@ Item {
 
     property bool isGenerating: false
     property int modelIndex: 0
-    property var modelNames: ["Auto", "Groq", "Gemini"]
-    property var modelKeys: ["auto", "groq", "gemini"]
+    property var modelNames: ["Auto", "Groq"]
+    property var modelKeys: ["auto", "groq"]
     property string selectedModel: modelKeys[modelIndex]
 
     Connections {
