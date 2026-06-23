@@ -253,6 +253,8 @@ Item {
         var viewW = scrollFlickable.width
         var viewH = scrollFlickable.height
 
+        if (viewW <= 0 || viewH <= 0) return
+
         if (contentW <= viewW) {
             scrollFlickable.contentX = (contentW - viewW) / 2
         } else {
@@ -263,6 +265,7 @@ Item {
         } else {
             scrollFlickable.contentY = Math.max(0, Math.min(scrollFlickable.contentY, contentH - viewH))
         }
+        scrollFlickable.returnToBounds()
     }
 
     function centerView() {
@@ -319,7 +322,7 @@ Item {
             collapsedNodes[nodeId] = true
         }
         relayout()
-        clampContentToBounds()
+        Qt.callLater(clampContentToBounds)
         canvas.requestPaint()
     }
 
