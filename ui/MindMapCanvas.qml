@@ -14,6 +14,7 @@ Item {
     property real canvasWidth: 800
     property real canvasHeight: 600
     property int nodeCount: 0
+    property bool isZooming: false
 
     property var branchColors: ({
         "branch_0": "#E74C3C", "branch_1": "#3498DB", "branch_2": "#2ECC71",
@@ -349,15 +350,34 @@ Item {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: function(wheel) {
-                var oldZoom = zoomLevel
-                if (wheel.angleDelta.y > 0)
-                    zoomLevel = Math.min(3.0, zoomLevel * 1.12)
-                else
-                    zoomLevel = Math.max(0.15, zoomLevel / 1.12)
+                root.isZooming = true
+                zoomEndTimer.restart()
 
-                var ratio = zoomLevel / oldZoom
-                scrollFlickable.contentX = wheel.x * ratio - (wheel.x - scrollFlickable.contentX)
-                scrollFlickable.contentY = wheel.y * ratio - (wheel.y - scrollFlickable.contentY)
+                var oldZoom = zoomLevel
+                var newZoom
+                if (wheel.angleDelta.y > 0)
+                    newZoom = Math.min(3.0, zoomLevel * 1.12)
+                else
+                    newZoom = Math.max(0.15, zoomLevel / 1.12)
+
+                if (newZoom === oldZoom) return
+
+                var worldX = (scrollFlickable.contentX + wheel.x) / oldZoom
+                var worldY = (scrollFlickable.contentY + wheel.y) / oldZoom
+
+                zoomLevel = newZoom
+
+                scrollFlickable.contentX = worldX * newZoom - wheel.x
+                scrollFlickable.contentY = worldY * newZoom - wheel.y
+                scrollFlickable.returnToBounds()
+            }
+        }
+
+        Timer {
+            id: zoomEndTimer
+            interval: 150
+            onTriggered: {
+                root.isZooming = false
                 canvas.requestPaint()
             }
         }
@@ -483,8 +503,8 @@ Item {
                 border.width: 1
                 z: isRoot ? 10 : 1
 
-                Behavior on x { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                Behavior on y { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                Behavior on x { NumberAnimation { duration: root.isZooming ? 0 : 350; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: root.isZooming ? 0 : 350; easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
@@ -650,7 +670,7 @@ Item {
                 border.color: Theme.divider
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text { anchors.centerIn: parent; text: "+"; color: Theme.textPrimary; font.pixelSize: 14; font.weight: Font.Bold }
-                MouseArea { id: zoomPlusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { zoomLevel = Math.min(3.0, zoomLevel * 1.2); canvas.requestPaint() } }
+                MouseArea { id: zoomPlusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { root.isZooming = true; zoomEndTimer.restart(); zoomLevel = Math.min(3.0, zoomLevel * 1.2) } }
             }
 
             Text {
@@ -666,7 +686,7 @@ Item {
                 border.color: Theme.divider
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text { anchors.centerIn: parent; text: "\u2212"; color: Theme.textPrimary; font.pixelSize: 14; font.weight: Font.Bold }
-                MouseArea { id: zoomMinusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { zoomLevel = Math.max(0.15, zoomLevel / 1.2); canvas.requestPaint() } }
+                MouseArea { id: zoomMinusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { root.isZooming = true; zoomEndTimer.restart(); zoomLevel = Math.max(0.15, zoomLevel / 1.2) } }
             }
 
             Rectangle { width: 20; height: 1; color: Theme.divider; anchors.horizontalCenter: parent.horizontalCenter }
