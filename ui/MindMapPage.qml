@@ -24,12 +24,17 @@ Item {
             try {
                 var data = JSON.parse(jsonString)
                 mindMapWindow.pendingTreeData = data
+                emptyState.visible = false
                 mindMapWindow.open()
             } catch (e) {
                 statusLabel.text = "Failed to parse mind map data"
                 statusLabel.color = Theme.accentRed
                 statusTimer.start()
             }
+        }
+        function onNodeCountChanged(count) {
+            nodeCountLabel.text = count + " nodes"
+            nodeCountLabel.visible = true
         }
         function onErrorOccurred(msg) {
             root.isGenerating = false
@@ -334,7 +339,14 @@ Item {
                 }
 
                 Text {
-                    text: "Right-click nodes to collapse"
+                    id: nodeCountLabel
+                    text: ""
+                    color: Theme.textMuted
+                    font.pixelSize: 9
+                    visible: false
+                }
+                Text {
+                    text: "Click branches to expand/collapse  \u2022  Right-click for more options  \u2022  Scroll to zoom  \u2022  Drag to pan"
                     color: Theme.textMuted
                     font.pixelSize: 9
                 }
@@ -396,6 +408,9 @@ Item {
         onAccepted: {
             var path = selectedFile.toString()
             if (path.startsWith("file:///")) path = path.substring(8)
+            // On Windows, path may start with / after removing file:///
+            if (path.startsWith("/") && path.length > 2 && path.charAt(2) === ":")
+                path = path.substring(1)
             if (path) MindMapBackend.generateFromPdf(path)
         }
     }
@@ -407,27 +422,30 @@ Item {
         onAccepted: {
             var path = selectedFile.toString()
             if (path.startsWith("file:///")) path = path.substring(8)
+            if (path.startsWith("/") && path.length > 2 && path.charAt(2) === ":")
+                path = path.substring(1)
             if (path) MindMapBackend.generateFromFile(path)
         }
     }
 
     function onNew() {
         emptyState.visible = true
+        nodeCountLabel.visible = false
         mindMapWindow.close()
     }
 
     function onExport() {
-        if (typeof ExportBackend !== 'undefined' && typeof PlotBackend !== 'undefined') {
-            var exportPath = ExportBackend.getExportPath("mindmap", "png")
-            if (exportPath) {
-                // Use grabToImage on the canvas
-                mindMapCanvas.forceRepaint()
-                // Export via Python
-                ExportBackend.exportText("mindmap_data.json", JSON.stringify(mindMapWindow.pendingTreeData, null, 2))
-                statusLabel.text = "Mind map data exported as JSON"
-                statusLabel.color = Theme.accentBlue
+        if (typeof ExportBackend !== 'undefined') {
+            if (!mindMapWindow.pendingTreeData) {
+                statusLabel.text = "No mind map to export"
+                statusLabel.color = Theme.accentRed
                 statusTimer.start()
+                return
             }
+            ExportBackend.exportText("mindmap_data.json", JSON.stringify(mindMapWindow.pendingTreeData, null, 2))
+            statusLabel.text = "Mind map data exported as JSON"
+            statusLabel.color = Theme.accentBlue
+            statusTimer.start()
         }
     }
 
@@ -580,7 +598,7 @@ Item {
                     anchors.leftMargin: 12; anchors.rightMargin: 12
 
                     Text {
-                        text: "Scroll to zoom \u2022 Click to expand/collapse \u2022 Drag to move \u2022 Hover for details"
+                        text: "Scroll to zoom \u2022 Click branches to expand/collapse \u2022 Right-click for options \u2022 Drag nodes to reposition \u2022 Hover for details"
                         color: Theme.textMuted
                         font.pixelSize: 9
                         Layout.fillWidth: true

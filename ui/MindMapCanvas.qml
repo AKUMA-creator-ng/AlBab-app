@@ -9,6 +9,7 @@ Item {
     property var allNodes: ({})
     property var nodePositions: ({})
     property var collapsedNodes: ({})
+    property var dragOffsets: ({})  // Track user drag offsets per node
     property real zoomLevel: 1.0
     property real canvasWidth: 800
     property real canvasHeight: 600
@@ -21,8 +22,8 @@ Item {
         "branch_6": "#E67E22", "branch_7": "#E84393"
     })
 
-    readonly property real hGap: 50
-    readonly property real vGap: 10
+    readonly property real hGap: 60
+    readonly property real vGap: 12
     readonly property real nodePadding: 16
     readonly property real avgCharWidth: 7.0
 
@@ -32,9 +33,10 @@ Item {
     readonly property string rootBg: "#B48250"
     readonly property string rootText: "#FFFFFF"
 
-    // Tooltip for node descriptions
+    // Tooltip - parented to Flickable content so it scrolls with the canvas
     Rectangle {
         id: tooltip
+        parent: canvasContainer
         z: 200
         visible: false
         width: tooltipText.implicitWidth + 20
@@ -54,15 +56,15 @@ Item {
             horizontalAlignment: Text.AlignLeft
         }
 
-        function show(text, mx, my) {
+        function show(text, cx, cy) {
             if (!text || text.length === 0) { visible = false; return }
             tooltipText.text = text
-            var tx = mx + 15
-            var ty = my - height - 5
-            if (tx + width > scrollFlickable.contentX + scrollFlickable.width)
-                tx = mx - width - 15
-            if (ty < scrollFlickable.contentY)
-                ty = my + 20
+            var tx = cx + 15
+            var ty = cy - height - 5
+            if (tx + width > canvasContainer.width)
+                tx = cx - width - 15
+            if (ty < 0)
+                ty = cy + 20
             tooltip.x = tx
             tooltip.y = ty
             visible = true
@@ -83,12 +85,10 @@ Item {
     }
 
     function getBranchColor(nodeId) {
-        // Walk up the tree to find which branch this node belongs to
         var node = allNodes[nodeId]
         if (!node) return threadColor
         var branchId = node.branchId || ""
         if (branchId && branchColors[branchId]) return branchColors[branchId]
-        // Check if the node itself has a color from the AI
         if (node.color) return node.color
         return threadColor
     }
@@ -143,7 +143,10 @@ Item {
         var w = nd ? nd.w : 150
         var h = nd ? nd.h : 40
 
-        nodePositions[node.id] = { x: x, y: y, visible: true }
+        // Apply any user drag offset
+        var offsetX = dragOffsets[node.id] ? dragOffsets[node.id].x : 0
+        var offsetY = dragOffsets[node.id] ? dragOffsets[node.id].y : 0
+        nodePositions[node.id] = { x: x + offsetX, y: y + offsetY, visible: true }
 
         if (collapsedNodes[node.id]) return
         if (!node.children || node.children.length === 0) return
@@ -183,11 +186,11 @@ Item {
         if (!treeData) return
         var totalHeight = measureVisible(treeData)
         var rootW = allNodes["root"] ? allNodes["root"].w : 180
-        var startX = rootW / 2 + 40
-        var startY = totalHeight / 2 + 40
+        var startX = rootW / 2 + 60
+        var startY = totalHeight / 2 + 60
         positionVisible(treeData, startX, startY, 0)
 
-        var maxX = 40
+        var maxX = 60
         var keys = Object.keys(allNodes)
         for (var i = 0; i < keys.length; i++) {
             var p = nodePositions[keys[i]]
@@ -197,14 +200,15 @@ Item {
                 if (right > maxX) maxX = right
             }
         }
-        canvasWidth = maxX + 120
-        canvasHeight = totalHeight + 80
+        canvasWidth = maxX + 160
+        canvasHeight = totalHeight + 120
     }
 
     function buildTree(data) {
         treeData = data
         allNodes = {}
         collapsedNodes = {}
+        dragOffsets = {}  // Reset drag offsets on new tree
         nodePositions = {}
 
         collectAllNodes(data, 0, "")
@@ -218,11 +222,24 @@ Item {
 
     function centerView() {
         var rootPos = nodePositions["root"]
-        if (rootPos) {
-            var cx = rootPos.x * zoomLevel - scrollFlickable.width / 3
-            var cy = rootPos.y * zoomLevel - scrollFlickable.height / 2
-            scrollFlickable.contentX = Math.max(0, Math.min(cx, scrollFlickable.contentWidth - scrollFlickable.width))
-            scrollFlickable.contentY = Math.max(0, Math.min(cy, scrollFlickable.contentHeight - scrollFlickable.height))
+        if (!rootPos) return
+        var contentW = scrollFlickable.contentWidth
+        var contentH = scrollFlickable.contentHeight
+        var viewW = scrollFlickable.width
+        var viewH = scrollFlickable.height
+
+        // Guard against NaN when content is smaller than view
+        if (contentW <= viewW) {
+            scrollFlickable.contentX = (contentW - viewW) / 2
+        } else {
+            var cx = rootPos.x * zoomLevel - viewW / 3
+            scrollFlickable.contentX = Math.max(0, Math.min(cx, contentW - viewW))
+        }
+        if (contentH <= viewH) {
+            scrollFlickable.contentY = (contentH - viewH) / 2
+        } else {
+            var cy = rootPos.y * zoomLevel - viewH / 2
+            scrollFlickable.contentY = Math.max(0, Math.min(cy, contentH - viewH))
         }
     }
 
@@ -230,7 +247,7 @@ Item {
         if (canvasWidth === 0 || canvasHeight === 0) return
         var zx = scrollFlickable.width / (canvasWidth + 80)
         var zy = scrollFlickable.height / (canvasHeight + 80)
-        zoomLevel = Math.max(0.3, Math.min(1.0, Math.min(zx, zy)))
+        zoomLevel = Math.max(0.15, Math.min(1.0, Math.min(zx, zy)))
         // Center after zoom
         scrollFlickable.contentX = (canvasWidth * zoomLevel - scrollFlickable.width) / 2
         scrollFlickable.contentY = (canvasHeight * zoomLevel - scrollFlickable.height) / 2
@@ -246,6 +263,7 @@ Item {
         allNodes = {}
         nodePositions = {}
         collapsedNodes = {}
+        dragOffsets = {}
         nodeCount = 0
         nodeList.model = 0
         canvas.requestPaint()
@@ -264,6 +282,65 @@ Item {
     function resetZoom() {
         zoomLevel = 1.0
         centerView()
+        canvas.requestPaint()
+    }
+
+    function expandAll() {
+        collapsedNodes = {}
+        relayout()
+        fitToView()
+    }
+
+    function collapseAll() {
+        var keys = Object.keys(allNodes)
+        for (var i = 0; i < keys.length; i++) {
+            var nd = allNodes[keys[i]]
+            if (nd && nd.hasChildren && keys[i] !== "root") {
+                collapsedNodes[keys[i]] = true
+            }
+        }
+        relayout()
+        fitToView()
+    }
+
+    // Right-click context menu
+    Menu {
+        id: contextMenu
+
+        property string contextNodeId: ""
+
+        MenuItem {
+            text: contextMenu.contextNodeId === "root" ? "Collapse All" : "Toggle Branch"
+            onTriggered: {
+                if (contextMenu.contextNodeId === "root") {
+                    collapseAll()
+                } else {
+                    toggleCollapse(contextMenu.contextNodeId)
+                }
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Expand All"
+            onTriggered: expandAll()
+        }
+        MenuItem {
+            text: "Collapse All"
+            onTriggered: collapseAll()
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Reset Position"
+            onTriggered: {
+                delete dragOffsets[contextMenu.contextNodeId]
+                relayout()
+                canvas.requestPaint()
+            }
+        }
+        MenuItem {
+            text: "Fit to View"
+            onTriggered: fitToView()
+        }
     }
 
     Flickable {
@@ -273,17 +350,27 @@ Item {
         contentHeight: canvasHeight * zoomLevel
         clip: true
         flickableDirection: Flickable.HorizontalAndVerticalFlick
+        boundsBehavior: Flickable.StopAtBounds
 
+        // Canvas background
+        Rectangle {
+            id: bgRect
+            anchors.fill: parent
+            color: Theme.canvasBg
+        }
+
+        // Zoom with scroll wheel - on a passive MouseArea that doesn't steal flick events
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: function(wheel) {
                 var oldZoom = zoomLevel
                 if (wheel.angleDelta.y > 0)
-                    zoomLevel = Math.min(3.0, zoomLevel * 1.1)
+                    zoomLevel = Math.min(3.0, zoomLevel * 1.12)
                 else
-                    zoomLevel = Math.max(0.2, zoomLevel / 1.1)
+                    zoomLevel = Math.max(0.15, zoomLevel / 1.12)
 
+                // Zoom toward cursor position
                 var ratio = zoomLevel / oldZoom
                 scrollFlickable.contentX = wheel.x * ratio - (wheel.x - scrollFlickable.contentX)
                 scrollFlickable.contentY = wheel.y * ratio - (wheel.y - scrollFlickable.contentY)
@@ -291,248 +378,290 @@ Item {
             }
         }
 
-        Canvas {
-            id: canvas
+        Item {
+            id: canvasContainer
             width: canvasWidth * zoomLevel
             height: canvasHeight * zoomLevel
 
-            onPaint: {
-                var ctx = getContext("2d")
-                if (!ctx) return
-                ctx.clearRect(0, 0, width, height)
-                ctx.save()
-                ctx.scale(zoomLevel, zoomLevel)
-                drawConnections(ctx)
-                ctx.restore()
-            }
+            Canvas {
+                id: canvas
+                anchors.fill: parent
 
-            function drawConnections(ctx) {
-                if (!treeData) return
-                drawNodeConnections(ctx, treeData)
-            }
-
-            function drawNodeConnections(ctx, node) {
-                if (!node || !node.id) return
-                var pos = nodePositions[node.id]
-                if (!pos || !pos.visible) return
-                if (collapsedNodes[node.id]) return
-                if (!node.children) return
-
-                var nd = allNodes[node.id]
-                if (!nd) return
-
-                for (var i = 0; i < node.children.length; i++) {
-                    var child = node.children[i]
-                    if (!child || !child.id) continue
-                    var childPos = nodePositions[child.id]
-                    var childNd = allNodes[child.id]
-                    if (!childPos || !childPos.visible || !childNd) continue
-
-                    // Use branch color for connections
-                    var lineColor = getBranchColor(child.id)
-
-                    ctx.beginPath()
-                    ctx.strokeStyle = lineColor
-                    ctx.lineWidth = 2.5
-                    ctx.lineCap = "round"
-                    ctx.globalAlpha = 0.6
-
-                    var startX2 = pos.x + nd.w / 2
-                    var startY2 = pos.y
-                    var endX = childPos.x - childNd.w / 2
-                    var endY = childPos.y
-
-                    var midX = (startX2 + endX) / 2
-
-                    ctx.moveTo(startX2, startY2)
-                    ctx.bezierCurveTo(midX, startY2, midX, endY, endX, endY)
-                    ctx.stroke()
-                    ctx.globalAlpha = 1.0
-
-                    drawNodeConnections(ctx, child)
-                }
-            }
-        }
-
-        Repeater {
-            id: nodeList
-            model: nodeCount
-
-            Rectangle {
-                id: nodeRect
-                property string nodeId: {
-                    var keys = Object.keys(allNodes)
-                    return index < keys.length ? keys[index] : ""
-                }
-                property var nd: allNodes[nodeId] || ({})
-                property var pos: nodePositions[nodeId] || ({})
-                property bool isVisible: pos.visible === true
-                property bool isRoot: nodeId === "root"
-                property bool isBranch: nd.hasChildren === true
-                property bool isCollapsed: collapsedNodes[nodeId] === true
-                property bool isDragged: nodeDragArea.drag.active
-                property bool isHovered: nodeHoverArea.containsMouse && !isDragged
-                property string branchColor: getBranchColor(nodeId)
-                property string nodeDescription: nd.description || ""
-
-                x: isDragged ? nodeRect.x : (isVisible ? (pos.x || 0) * zoomLevel - (nd.w || 100) * zoomLevel / 2 : -500)
-                y: isDragged ? nodeRect.y : (isVisible ? (pos.y || 0) * zoomLevel - (nd.h || 40) * zoomLevel / 2 : -500)
-                width: (nd.w || 100) * zoomLevel
-                height: (nd.h || 40) * zoomLevel
-                radius: isRoot ? 24 : 20
-
-                visible: true
-                opacity: isVisible ? 1.0 : 0.0
-                scale: isHovered ? 1.05 : 1.0
-
-                color: {
-                    if (isRoot) return rootBg
-                    if (isBranch && nd.depth === 1) return branchColor
-                    return nodeBg
-                }
-                border.color: {
-                    if (isDragged) return branchColor
-                    if (isHovered) return branchColor
-                    if (isBranch && nd.depth === 1) return branchColor
-                    return nodeBorder
-                }
-                border.width: isHovered ? 2 : 1
-                z: isDragged ? 100 : (isRoot ? 10 : 1)
-
-                Behavior on x { NumberAnimation { duration: isDragged ? 0 : 400; easing.type: Easing.OutCubic } }
-                Behavior on y { NumberAnimation { duration: isDragged ? 0 : 400; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-
-                // Colored left accent for branch nodes
-                Rectangle {
-                    visible: !nodeRect.isRoot && nodeRect.nd.depth === 1
-                    width: 4 * zoomLevel
-                    height: parent.height * 0.5
-                    radius: 2 * zoomLevel
-                    color: "#FFFFFF"
-                    opacity: 0.3
-                    anchors.left: parent.left
-                    anchors.leftMargin: 8 * zoomLevel
-                    anchors.verticalCenter: parent.verticalCenter
+                onPaint: {
+                    var ctx = getContext("2d")
+                    if (!ctx) return
+                    ctx.clearRect(0, 0, width, height)
+                    ctx.save()
+                    ctx.scale(zoomLevel, zoomLevel)
+                    drawConnections(ctx)
+                    ctx.restore()
                 }
 
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 4 * zoomLevel
+                function drawConnections(ctx) {
+                    if (!treeData) return
+                    drawNodeConnections(ctx, treeData)
+                }
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: nodeRect.nd.label || ""
-                        color: {
-                            if (nodeRect.isRoot) return rootText
-                            if (nodeRect.isBranch && nodeRect.nd.depth === 1) return "#FFFFFF"
-                            return Theme.textPrimary
+                function drawNodeConnections(ctx, node) {
+                    if (!node || !node.id) return
+                    var pos = nodePositions[node.id]
+                    if (!pos || !pos.visible) return
+                    if (collapsedNodes[node.id]) return
+                    if (!node.children) return
+
+                    var nd = allNodes[node.id]
+                    if (!nd) return
+
+                    for (var i = 0; i < node.children.length; i++) {
+                        var child = node.children[i]
+                        if (!child || !child.id) continue
+                        var childPos = nodePositions[child.id]
+                        var childNd = allNodes[child.id]
+                        if (!childPos || !childPos.visible || !childNd) continue
+
+                        // Use branch color for connections
+                        var lineColor = getBranchColor(child.id)
+
+                        ctx.beginPath()
+                        ctx.strokeStyle = lineColor
+                        ctx.lineWidth = 2.5
+                        ctx.lineCap = "round"
+                        ctx.globalAlpha = 0.6
+
+                        var sx = pos.x + nd.w / 2
+                        var sy = pos.y
+                        var ex = childPos.x - childNd.w / 2
+                        var ey = childPos.y
+
+                        var midX = (sx + ex) / 2
+
+                        ctx.moveTo(sx, sy)
+                        ctx.bezierCurveTo(midX, sy, midX, ey, ex, ey)
+                        ctx.stroke()
+                        ctx.globalAlpha = 1.0
+
+                        // Draw collapsed indicator
+                        if (collapsedNodes[child.id] && childNd.hasChildren) {
+                            var indicatorX = ex
+                            var indicatorY = ey
+                            ctx.beginPath()
+                            ctx.arc(indicatorX - 6, indicatorY, 8, 0, 2 * Math.PI)
+                            ctx.fillStyle = lineColor
+                            ctx.globalAlpha = 0.15
+                            ctx.fill()
+                            ctx.globalAlpha = 1.0
+                            ctx.strokeStyle = lineColor
+                            ctx.lineWidth = 1.5
+                            ctx.stroke()
+
+                            // Draw "..." or count
+                            ctx.fillStyle = lineColor
+                            ctx.font = "bold 9px sans-serif"
+                            ctx.textAlign = "center"
+                            ctx.textBaseline = "middle"
+                            ctx.fillText(childNd.childCount + "", indicatorX - 6, indicatorY)
                         }
-                        font.pixelSize: (nodeRect.isRoot ? 14 : (nodeRect.nd.depth === 1 ? 12 : 11)) * zoomLevel
-                        font.weight: nodeRect.isRoot ? Font.Bold : (nodeRect.nd.depth === 1 ? Font.DemiBold : Font.Medium)
-                        width: nodeRect.width - (nodeRect.isBranch ? 32 : 16) * zoomLevel
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        maximumLineCount: 1
-                        verticalAlignment: Text.AlignVCenter
+
+                        drawNodeConnections(ctx, child)
+                    }
+                }
+            }
+
+            // Nodes rendered as children of canvasContainer (scaled coordinates)
+            Repeater {
+                id: nodeList
+                model: nodeCount
+
+                Rectangle {
+                    id: nodeRect
+                    property string nodeId: {
+                        var keys = Object.keys(allNodes)
+                        return index < keys.length ? keys[index] : ""
+                    }
+                    property var nd: allNodes[nodeId] || ({})
+                    property var pos: nodePositions[nodeId] || ({})
+                    property bool isVisible: pos.visible === true
+                    property bool isRoot: nodeId === "root"
+                    property bool isBranch: nd.hasChildren === true
+                    property bool isCollapsed: collapsedNodes[nodeId] === true
+                    property string branchColor: getBranchColor(nodeId)
+                    property string nodeDescription: nd.description || ""
+
+                    // Position in scaled space (canvasContainer is already sized to zoomLevel)
+                    x: isVisible ? (pos.x || 0) * zoomLevel - (nd.w || 100) * zoomLevel / 2 : -9999
+                    y: isVisible ? (pos.y || 0) * zoomLevel - (nd.h || 40) * zoomLevel / 2 : -9999
+                    width: (nd.w || 100) * zoomLevel
+                    height: (nd.h || 40) * zoomLevel
+                    radius: isRoot ? 24 : 20
+
+                    visible: true
+                    opacity: isVisible ? 1.0 : 0.0
+
+                    color: {
+                        if (isRoot) return rootBg
+                        if (isBranch && nd.depth === 1) return branchColor
+                        return nodeBg
+                    }
+                    border.color: {
+                        if (isBranch && nd.depth === 1) return Qt.darker(branchColor, 1.1)
+                        return nodeBorder
+                    }
+                    border.width: 1
+                    z: isRoot ? 10 : 1
+
+                    Behavior on x { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+                    // Colored left accent for branch nodes
+                    Rectangle {
+                        visible: !nodeRect.isRoot && nodeRect.nd.depth === 1
+                        width: 4 * zoomLevel
+                        height: parent.height * 0.5
+                        radius: 2 * zoomLevel
+                        color: "#FFFFFF"
+                        opacity: 0.3
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8 * zoomLevel
+                        anchors.verticalCenter: parent.verticalCenter
                     }
 
-                    // Collapse/expand button
-                    Rectangle {
-                        visible: nodeRect.isBranch
-                        width: 18 * zoomLevel; height: 18 * zoomLevel; radius: 9 * zoomLevel
-                        color: nodeRect.isCollapsed ? (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor) : "transparent"
-                        border.color: nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor
-                        border.width: 1
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 4 * zoomLevel
 
                         Text {
-                            anchors.centerIn: parent
-                            text: nodeRect.isCollapsed ? "+" : "\u2212"
-                            color: nodeRect.isCollapsed ? "#FFFFFF" : (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor)
-                            font.pixelSize: 11 * zoomLevel
-                            font.weight: Font.Bold
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: nodeRect.nd.label || ""
+                            color: {
+                                if (nodeRect.isRoot) return rootText
+                                if (nodeRect.isBranch && nodeRect.nd.depth === 1) return "#FFFFFF"
+                                return Theme.textPrimary
+                            }
+                            font.pixelSize: (nodeRect.isRoot ? 14 : (nodeRect.nd.depth === 1 ? 12 : 11)) * zoomLevel
+                            font.weight: nodeRect.isRoot ? Font.Bold : (nodeRect.nd.depth === 1 ? Font.DemiBold : Font.Medium)
+                            width: nodeRect.width - (nodeRect.isBranch ? 32 : 16) * zoomLevel
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            verticalAlignment: Text.AlignVCenter
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: toggleCollapse(nodeId)
-                        }
-                    }
-                }
+                        // Collapse/expand indicator
+                        Rectangle {
+                            visible: nodeRect.isBranch
+                            width: 18 * zoomLevel; height: 18 * zoomLevel; radius: 9 * zoomLevel
+                            color: nodeRect.isCollapsed ? (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor) : "transparent"
+                            border.color: nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor
+                            border.width: 1
 
-                // Hover area for descriptions
-                MouseArea {
-                    id: nodeHoverArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: nodeRect.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            Text {
+                                anchors.centerIn: parent
+                                text: nodeRect.isCollapsed ? "+" : "\u2212"
+                                color: nodeRect.isCollapsed ? "#FFFFFF" : (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor)
+                                font.pixelSize: 11 * zoomLevel
+                                font.weight: Font.Bold
+                            }
 
-                    onEntered: {
-                        tooltip.show(nodeRect.nodeDescription, nodeRect.x + nodeRect.width / 2, nodeRect.y)
-                    }
-                    onExited: {
-                        tooltip.visible = false
-                    }
-                    onPositionChanged: {
-                        if (nodeRect.nodeDescription) {
-                            tooltip.show(nodeRect.nodeDescription, mouseX, mouseY)
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: nodeDragArea
-                    anchors.fill: parent
-                    drag.target: nodeRect
-                    drag.axis: Drag.XAndY
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton
-
-                    onPressed: function(mouse) {
-                        // Store initial position for drag threshold
-                        nodeRect._dragStartX = nodeRect.x
-                        nodeRect._dragStartY = nodeRect.y
-                    }
-
-                    onPositionChanged: {
-                        // Update canvas connections in real-time during drag
-                        if (drag.active) {
-                            var keys = Object.keys(allNodes)
-                            if (index < keys.length) {
-                                var nid = keys[index]
-                                var p = nodePositions[nid]
-                                if (p) {
-                                    p.x = (nodeRect.x + nodeRect.width / 2) / zoomLevel
-                                    p.y = (nodeRect.y + nodeRect.height / 2) / zoomLevel
-                                    canvas.requestPaint()
-                                }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: toggleCollapse(nodeId)
                             }
                         }
                     }
 
-                    onClicked: function(mouse) {
-                        if (nodeRect.isBranch) {
-                            toggleCollapse(nodeId)
-                        }
-                    }
+                    // Single MouseArea for hover + click + right-click + drag
+                    // Uses pressAndHold threshold to distinguish click from drag
+                    MouseArea {
+                        id: nodeInteraction
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: nodeRect.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        drag.target: nodeRect
+                        drag.axis: Drag.XAndY
+                        drag.threshold: 10
 
-                    onReleased: {
-                        if (isDragged) {
-                            var keys = Object.keys(allNodes)
-                            if (index < keys.length) {
-                                var nid = keys[index]
-                                var p = nodePositions[nid]
-                                if (p) {
-                                    p.x = (nodeRect.x + nodeRect.width / 2) / zoomLevel
-                                    p.y = (nodeRect.y + nodeRect.height / 2) / zoomLevel
-                                    canvas.requestPaint()
+                        property real pressX: 0
+                        property real pressY: 0
+                        property bool wasDragged: false
+
+                        onPressed: function(mouse) {
+                            pressX = mouse.x
+                            pressY = mouse.y
+                            wasDragged = false
+
+                            if (mouse.button === Qt.RightButton) {
+                                mouse.accepted = true
+                                contextMenu.contextNodeId = nodeId
+                                contextMenu.popup()
+                                return
+                            }
+                        }
+
+                        onPositionChanged: function(mouse) {
+                            // Show tooltip on hover
+                            if (!drag.active && nodeRect.nodeDescription) {
+                                // Convert to canvasContainer coordinates
+                                var globalX = nodeRect.x + mouse.x
+                                var globalY = nodeRect.y + mouse.y
+                                tooltip.show(nodeRect.nodeDescription, globalX, globalY)
+                            }
+
+                            // Track if this is a significant drag
+                            if (drag.active) {
+                                var dx = mouse.x - pressX
+                                var dy = mouse.y - pressY
+                                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                                    wasDragged = true
                                 }
                             }
                         }
+
+                        onClicked: function(mouse) {
+                            if (mouse.button === Qt.RightButton) return
+                            // Only toggle collapse if it wasn't a drag
+                            if (!wasDragged && nodeRect.isBranch) {
+                                toggleCollapse(nodeId)
+                            }
+                        }
+
+                        onReleased: function(mouse) {
+                            if (mouse.button === Qt.RightButton) return
+                            // If dragged, save the offset for relayout persistence
+                            if (wasDragged) {
+                                var keys = Object.keys(allNodes)
+                                if (index < keys.length) {
+                                    var nid = keys[index]
+                                    var origPos = nodePositions[nid]
+                                    if (origPos) {
+                                        var newX = (nodeRect.x + nodeRect.width / 2) / zoomLevel
+                                        var newY = (nodeRect.y + nodeRect.height / 2) / zoomLevel
+                                        dragOffsets[nid] = {
+                                            x: newX - origPos.x + (dragOffsets[nid] ? dragOffsets[nid].x : 0),
+                                            y: newY - origPos.y + (dragOffsets[nid] ? dragOffsets[nid].y : 0)
+                                        }
+                                        // Update the position directly so connections follow
+                                        nodePositions[nid].x = newX
+                                        nodePositions[nid].y = newY
+                                        canvas.requestPaint()
+                                    }
+                                }
+                            }
+                        }
+
+                        onEntered: {
+                            nodeRect.scale = 1.03
+                        }
+                        onExited: {
+                            nodeRect.scale = 1.0
+                            tooltip.visible = false
+                        }
                     }
+
+                    // Smooth scale animation
+                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                 }
             }
         }
@@ -543,7 +672,7 @@ Item {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: 12
-        width: 36; height: 130
+        width: 36; height: 150
         radius: 18
         color: Theme.glassBase
         border.color: Theme.divider
@@ -576,7 +705,7 @@ Item {
                 border.color: Theme.divider
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text { anchors.centerIn: parent; text: "\u2212"; color: Theme.textPrimary; font.pixelSize: 14; font.weight: Font.Bold }
-                MouseArea { id: zoomMinusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { zoomLevel = Math.max(0.2, zoomLevel / 1.2); canvas.requestPaint() } }
+                MouseArea { id: zoomMinusMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { zoomLevel = Math.max(0.15, zoomLevel / 1.2); canvas.requestPaint() } }
             }
 
             // Separator
@@ -592,6 +721,16 @@ Item {
                 MouseArea { id: fitMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: fitToView() }
             }
 
+            // Expand/Collapse all
+            Rectangle {
+                width: 28; height: 28; radius: 14
+                color: expandMouse.containsMouse ? Theme.chipBg : Theme.inputBg
+                border.color: Theme.divider
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text { anchors.centerIn: parent; text: "\u2261"; color: Theme.textPrimary; font.pixelSize: 14 }
+                MouseArea { id: expandMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: expandAll() }
+            }
+
             // Reset
             Rectangle {
                 width: 28; height: 28; radius: 14
@@ -599,7 +738,7 @@ Item {
                 border.color: Theme.divider
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text { anchors.centerIn: parent; text: "\u21BB"; color: Theme.textPrimary; font.pixelSize: 14 }
-                MouseArea { id: resetMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { resetZoom(); canvas.requestPaint() } }
+                MouseArea { id: resetMouse; anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onClicked: { resetZoom() } }
             }
         }
     }

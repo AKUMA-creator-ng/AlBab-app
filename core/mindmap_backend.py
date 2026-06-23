@@ -310,22 +310,28 @@ class MindMapBackend(QObject):
     mindMapReady = Signal(str)
     errorOccurred = Signal(str)
     statusChanged = Signal(str)
+    nodeCountChanged = Signal(int)
 
     def __init__(self, key_rotation=None, parent=None):
         super().__init__(parent)
         self._key_rotation = key_rotation
-        self._api_key = self._resolve_key()
         self._gemini_client = None
         self._selected_provider = "auto"
         self._generation_done = False
         self._gen_id = 0
         self._timeout_timer = None
+        self._api_key = self._resolve_key()
         if self._api_key:
             self._init_gemini()
 
     @Slot(str)
     def setProvider(self, provider):
         self._selected_provider = provider.lower()
+        # Re-initialize Gemini client when switching to gemini provider
+        if self._selected_provider == "gemini":
+            self._api_key = self._resolve_key()
+            if self._api_key:
+                self._init_gemini()
 
     def _resolve_key(self) -> str:
         if self._key_rotation and self._key_rotation.has_keys:
@@ -374,8 +380,12 @@ class MindMapBackend(QObject):
     def _force_timeout(self):
         if self._generation_done:
             return
+        self._generation_done = True
         self.errorOccurred.emit("Generation timed out - try again or use local mode")
         self.statusChanged.emit("idle")
+        if self._timeout_timer:
+            self._timeout_timer.cancel()
+            self._timeout_timer = None
 
     @Slot(str)
     def generateFromPdf(self, file_path):
@@ -415,6 +425,15 @@ class MindMapBackend(QObject):
         except Exception as e:
             self.errorOccurred.emit(f"Failed to read file: {str(e)}")
 
+    def _emit_result(self, result, gen_id):
+        """Emit the result if gen_id is still current. Returns True if emitted."""
+        if gen_id != self._gen_id:
+            return False
+        result = _assign_branch_colors(result)
+        self.mindMapReady.emit(json.dumps(result))
+        self.nodeCountChanged.emit(self._count_nodes(result))
+        return True
+
     def _generate_thread(self, text, gen_id):
         if gen_id != self._gen_id:
             return
@@ -424,36 +443,22 @@ class MindMapBackend(QObject):
 
             if self._selected_provider == "gemini":
                 result = self._try_gemini(prompt, gen_id)
-                if result:
-                    if gen_id != self._gen_id:
-                        return
-                    result = _assign_branch_colors(result)
-                    self.mindMapReady.emit(json.dumps(result))
+                if result and self._emit_result(result, gen_id):
                     return
                 self.statusChanged.emit("Generating locally...")
                 result = self._local_extract(text)
-                if gen_id != self._gen_id:
-                    return
-                result = _assign_branch_colors(result)
-                self.mindMapReady.emit(json.dumps(result))
+                self._emit_result(result, gen_id)
                 return
 
             elif self._selected_provider == "groq":
                 if gen_id != self._gen_id:
                     return
                 result = self._try_openai_provider(_FREE_PROVIDERS[0], prompt)
-                if result:
-                    if gen_id != self._gen_id:
-                        return
-                    result = _assign_branch_colors(result)
-                    self.mindMapReady.emit(json.dumps(result))
+                if result and self._emit_result(result, gen_id):
                     return
                 self.statusChanged.emit("Generating locally...")
                 result = self._local_extract(text)
-                if gen_id != self._gen_id:
-                    return
-                result = _assign_branch_colors(result)
-                self.mindMapReady.emit(json.dumps(result))
+                self._emit_result(result, gen_id)
                 return
 
             else:  # auto mode
@@ -462,11 +467,7 @@ class MindMapBackend(QObject):
                         return
                     self.statusChanged.emit(f"Trying {provider['name']}...")
                     result = self._try_openai_provider(provider, prompt)
-                    if result:
-                        if gen_id != self._gen_id:
-                            return
-                        result = _assign_branch_colors(result)
-                        self.mindMapReady.emit(json.dumps(result))
+                    if result and self._emit_result(result, gen_id):
                         return
 
                 # Try Gemini last
@@ -474,20 +475,13 @@ class MindMapBackend(QObject):
                     return
                 self.statusChanged.emit("Trying Gemini AI...")
                 result = self._try_gemini(prompt, gen_id)
-                if result:
-                    if gen_id != self._gen_id:
-                        return
-                    result = _assign_branch_colors(result)
-                    self.mindMapReady.emit(json.dumps(result))
+                if result and self._emit_result(result, gen_id):
                     return
 
                 # Local fallback
                 self.statusChanged.emit("Generating locally...")
                 result = self._local_extract(text)
-                if gen_id != self._gen_id:
-                    return
-                result = _assign_branch_colors(result)
-                self.mindMapReady.emit(json.dumps(result))
+                self._emit_result(result, gen_id)
 
         except Exception as e:
             if gen_id == self._gen_id:
@@ -501,6 +495,12 @@ class MindMapBackend(QObject):
                 self._timeout_timer = None
 
     def _try_gemini(self, prompt, gen_id=None):
+        # Always re-read the latest key from rotation (may have changed)
+        self._api_key = self._resolve_key()
+        if not self._api_key:
+            return None
+        # Re-init client with fresh key if needed
+        self._init_gemini()
         if not self._gemini_client:
             return None
 
@@ -535,7 +535,9 @@ class MindMapBackend(QObject):
         return None
 
     def _try_openai_provider(self, provider, prompt):
-        api_key = provider.get("api_key", "") or os.environ.get(provider.get("env_key", ""), "")
+        # These providers (Groq, Cerebras, etc.) use their own API keys from env
+        # (separate from the Gemini key rotation system)
+        api_key = os.environ.get(provider.get("env_key", ""), "")
         if not api_key or not _HAS_OPENAI:
             return None
 
@@ -563,6 +565,15 @@ class MindMapBackend(QObject):
         except Exception:
             pass
         return None
+
+    def _count_nodes(self, tree):
+        """Count total nodes in the tree."""
+        if not tree:
+            return 0
+        count = 1
+        for child in tree.get("children", []):
+            count += self._count_nodes(child)
+        return count
 
     def _local_extract(self, text):
         keywords = _tfidf_keywords(text, top_n=25)
