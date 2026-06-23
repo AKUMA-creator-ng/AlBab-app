@@ -322,8 +322,10 @@ Item {
             collapsedNodes[nodeId] = true
         }
         relayout()
-        Qt.callLater(clampContentToBounds)
-        canvas.requestPaint()
+        Qt.callLater(function() {
+            centerView()
+            canvas.requestPaint()
+        })
     }
 
     function resetZoom() {
