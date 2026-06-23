@@ -191,27 +191,60 @@ Item {
         }
     }
 
-    function hideAllPositions() {
-        var keys = Object.keys(allNodes)
-        for (var i = 0; i < keys.length; i++) {
-            nodePositions[keys[i]] = { x: 0, y: 0, visible: false }
+    function positionVisibleInto(posMap, node, x, y, depth) {
+        if (!node || !node.id) return
+        var nd = allNodes[node.id]
+        var w = nd ? nd.w : 150
+        var h = nd ? nd.h : 40
+
+        var offsetX = dragOffsets[node.id] ? dragOffsets[node.id].x : 0
+        var offsetY = dragOffsets[node.id] ? dragOffsets[node.id].y : 0
+        posMap[node.id] = { x: x + offsetX, y: y + offsetY, visible: true }
+
+        if (collapsedNodes[node.id]) return
+        if (!node.children || node.children.length === 0) return
+
+        var totalChildHeight = 0
+        var childHeights = []
+        for (var i = 0; i < node.children.length; i++) {
+            var ch = measureVisible(node.children[i])
+            childHeights.push(ch)
+            totalChildHeight += ch
+        }
+        totalChildHeight += (node.children.length - 1) * vGap
+
+        var childStartY = y + h / 2 - totalChildHeight / 2
+        var childX = x + w / 2 + hGap
+
+        var cursorY = childStartY
+        for (var j = 0; j < node.children.length; j++) {
+            var child = node.children[j]
+            if (!child || !child.id) continue
+            var cy = cursorY + childHeights[j] / 2
+            positionVisibleInto(posMap, child, childX, cy, depth + 1)
+            cursorY += childHeights[j] + vGap
         }
     }
 
     function relayout() {
-        nodePositions = {}
-        hideAllPositions()
-        if (!treeData) return
+        var newPos = {}
+        var keys = Object.keys(allNodes)
+        for (var i = 0; i < keys.length; i++) {
+            newPos[keys[i]] = { x: 0, y: 0, visible: false }
+        }
+        if (!treeData) {
+            nodePositions = newPos
+            return
+        }
         var totalHeight = measureVisible(treeData)
         var rootW = allNodes["root"] ? allNodes["root"].w : 180
         var startX = rootW / 2 + 60
         var startY = totalHeight / 2 + 60
-        positionVisible(treeData, startX, startY, 0)
+        positionVisibleInto(newPos, treeData, startX, startY, 0)
 
         var maxX = 60
-        var keys = Object.keys(allNodes)
         for (var i = 0; i < keys.length; i++) {
-            var p = nodePositions[keys[i]]
+            var p = newPos[keys[i]]
             var nd = allNodes[keys[i]]
             if (p && p.visible && nd) {
                 var right = p.x + nd.w / 2
@@ -220,6 +253,7 @@ Item {
         }
         canvasWidth = maxX + 160
         canvasHeight = totalHeight + 120
+        nodePositions = newPos
     }
 
     function buildTree(data) {
