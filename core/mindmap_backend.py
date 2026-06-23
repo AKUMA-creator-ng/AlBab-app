@@ -22,26 +22,26 @@ _MINDMAP_PROMPT = (
     "You are an expert knowledge organizer. Analyze the following text and create a comprehensive, "
     "hierarchical mind map structure.\n\n"
     "Return a JSON object with this exact structure:\n"
-    "{\n"
+    "{{\n"
     '  "id": "root",\n'
     '  "label": "Main Topic",\n'
     '  "description": "A 1-2 sentence overview of the entire topic",\n'
     '  "children": [\n'
-    "    {\n"
+    "    {{\n"
     '      "id": "branch_1",\n'
     '      "label": "Branch Name",\n'
     '      "description": "Brief explanation of this branch",\n'
     '      "children": [\n'
-    "        {\n"
+    "        {{\n"
     '          "id": "leaf_1_1",\n'
     '          "label": "Sub-concept",\n'
     '          "description": "Brief explanation",\n'
     '          "children": []\n'
-    "        }\n"
+    "        }}\n"
     "      ]\n"
-    "    }\n"
+    "    }}\n"
     "  ]\n"
-    "}\n\n"
+    "}}\n\n"
     "Rules:\n"
     "- Root node: the overarching topic (1 node)\n"
     "- Level 1 (main branches): 3-6 key themes or categories\n"
