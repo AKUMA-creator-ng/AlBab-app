@@ -17,12 +17,6 @@ Item {
     property bool isZooming: false
     property bool isPanning: scrollFlickable.moving
 
-    property var branchColors: ({
-        "branch_0": "#E74C3C", "branch_1": "#3498DB", "branch_2": "#2ECC71",
-        "branch_3": "#F39C12", "branch_4": "#9B59B6", "branch_5": "#1ABC9C",
-        "branch_6": "#E67E22", "branch_7": "#E84393"
-    })
-
     readonly property real hGap: 60
     readonly property real vGap: 12
     readonly property real nodePadding: 16
@@ -115,11 +109,6 @@ Item {
     }
 
     function getBranchColor(nodeId) {
-        var node = allNodes[nodeId]
-        if (!node) return threadColor
-        var branchId = node.branchId || ""
-        if (branchId && branchColors[branchId]) return branchColors[branchId]
-        if (node.color) return node.color
         return threadColor
     }
 
@@ -242,6 +231,15 @@ Item {
 
         collectAllNodes(data, 0, "")
         nodeCount = Object.keys(allNodes).length
+
+        // Auto-collapse everything below depth 1 (NotebookLM-style)
+        var keys = Object.keys(allNodes)
+        for (var i = 0; i < keys.length; i++) {
+            var nd = allNodes[keys[i]]
+            if (nd && nd.hasChildren && nd.depth >= 1) {
+                collapsedNodes[keys[i]] = true
+            }
+        }
 
         relayout()
 
@@ -425,7 +423,7 @@ Item {
 
                     ctx.beginPath()
                     ctx.strokeStyle = lineColor
-                    ctx.lineWidth = 2.5
+                    ctx.lineWidth = 2
                     ctx.lineCap = "round"
                     ctx.globalAlpha = 0.6
 
@@ -433,10 +431,15 @@ Item {
                     var sy = pos.y
                     var ex = childPos.x - childNd.w / 2
                     var ey = childPos.y
-                    var midX = (sx + ex) / 2
+
+                    var dx = ex - sx
+                    var cp1x = sx + dx * 0.5
+                    var cp1y = sy
+                    var cp2x = sx + dx * 0.5
+                    var cp2y = ey
 
                     ctx.moveTo(sx, sy)
-                    ctx.bezierCurveTo(midX, sy, midX, ey, ex, ey)
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, ex, ey)
                     ctx.stroke()
                     ctx.globalAlpha = 1.0
 
@@ -492,15 +495,8 @@ Item {
                 visible: true
                 opacity: isVisible ? 1.0 : 0.0
 
-                color: {
-                    if (isRoot) return rootBg
-                    if (isBranch && nd.depth === 1) return branchColor
-                    return nodeBg
-                }
-                border.color: {
-                    if (isBranch && nd.depth === 1) return Qt.darker(branchColor, 1.1)
-                    return nodeBorder
-                }
+                color: isRoot ? rootBg : nodeBg
+                border.color: nodeBorder
                 border.width: 1
                 z: isRoot ? 10 : 1
 
@@ -509,19 +505,6 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
-                // Left accent for L1 branches
-                Rectangle {
-                    visible: !nodeRect.isRoot && nodeRect.nd.depth === 1
-                    width: 4 * zoomLevel
-                    height: parent.height * 0.5
-                    radius: 2 * zoomLevel
-                    color: "#FFFFFF"
-                    opacity: 0.3
-                    anchors.left: parent.left
-                    anchors.leftMargin: 8 * zoomLevel
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
                 Row {
                     anchors.centerIn: parent
                     spacing: 4 * zoomLevel
@@ -529,11 +512,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: nodeRect.nd.label || ""
-                        color: {
-                            if (nodeRect.isRoot) return rootText
-                            if (nodeRect.isBranch && nodeRect.nd.depth === 1) return "#FFFFFF"
-                            return Theme.textPrimary
-                        }
+                        color: nodeRect.isRoot ? rootText : Theme.textPrimary
                         font.pixelSize: (nodeRect.isRoot ? 14 : (nodeRect.nd.depth === 1 ? 12 : 11)) * zoomLevel
                         font.weight: nodeRect.isRoot ? Font.Bold : (nodeRect.nd.depth === 1 ? Font.DemiBold : Font.Medium)
                         width: nodeRect.width - (nodeRect.isBranch ? 32 : 16) * zoomLevel
@@ -549,14 +528,14 @@ Item {
                         width: 18 * zoomLevel
                         height: 18 * zoomLevel
                         radius: 9 * zoomLevel
-                        color: nodeRect.isCollapsed ? (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor) : "transparent"
-                        border.color: nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor
+                        color: nodeRect.isCollapsed ? (nodeRect.isRoot ? "#AAFFFFFF" : threadColor) : "transparent"
+                        border.color: nodeRect.isRoot ? "#AAFFFFFF" : threadColor
                         border.width: 1
 
                         Text {
                             anchors.centerIn: parent
                             text: nodeRect.isCollapsed ? "+" : "\u2212"
-                            color: nodeRect.isCollapsed ? "#FFFFFF" : (nodeRect.isRoot ? "#AAFFFFFF" : nodeRect.branchColor)
+                            color: nodeRect.isCollapsed ? "#FFFFFF" : (nodeRect.isRoot ? "#AAFFFFFF" : threadColor)
                             font.pixelSize: 11 * zoomLevel
                             font.weight: Font.Bold
                         }
@@ -570,18 +549,20 @@ Item {
                     hoverEnabled: true
                     cursorShape: nodeRect.isBranch ? Qt.PointingHandCursor : Qt.ArrowCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    drag.target: nodeRect
+                    drag.target: allowDrag ? nodeRect : null
                     drag.axis: Drag.XAndY
                     drag.threshold: 12
 
                     property real pressX: 0
                     property real pressY: 0
                     property bool wasDragged: false
+                    property bool allowDrag: false
 
                     onPressed: function(mouse) {
                         pressX = mouse.x
                         pressY = mouse.y
                         wasDragged = false
+                        allowDrag = false
                         if (mouse.button === Qt.RightButton) {
                             mouse.accepted = true
                             contextMenu.contextNodeId = nodeId
@@ -589,17 +570,17 @@ Item {
                         }
                     }
 
+                    onPressAndHold: {
+                        allowDrag = true
+                        scrollFlickable.interactive = false
+                    }
+
                     onPositionChanged: function(mouse) {
                         if (!drag.active && nodeRect.nodeDescription) {
                             tooltip.show(nodeRect.nodeDescription, nodeRect.x + mouse.x, nodeRect.y + mouse.y)
                         }
                         if (drag.active) {
-                            var dx = mouse.x - pressX
-                            var dy = mouse.y - pressY
-                            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                                wasDragged = true
-                            }
-                            // Update connections in real-time
+                            wasDragged = true
                             var keys = Object.keys(allNodes)
                             if (index < keys.length) {
                                 var nid = keys[index]
@@ -622,6 +603,33 @@ Item {
 
                     onReleased: function(mouse) {
                         if (mouse.button === Qt.RightButton) return
+                        allowDrag = false
+                        scrollFlickable.interactive = true
+                        if (wasDragged) {
+                            var keys = Object.keys(allNodes)
+                            if (index < keys.length) {
+                                var nid = keys[index]
+                                var origPos = nodePositions[nid]
+                                if (origPos) {
+                                    var newX = (nodeRect.x + nodeRect.width / 2) / zoomLevel
+                                    var newY = (nodeRect.y + nodeRect.height / 2) / zoomLevel
+                                    dragOffsets[nid] = {
+                                        x: newX - origPos.x + (dragOffsets[nid] ? dragOffsets[nid].x : 0),
+                                        y: newY - origPos.y + (dragOffsets[nid] ? dragOffsets[nid].y : 0)
+                                    }
+                                    nodePositions[nid].x = newX
+                                    nodePositions[nid].y = newY
+                                    canvas.requestPaint()
+                                }
+                            }
+                        }
+                    }
+
+                    onCanceled: {
+                        allowDrag = false
+                        scrollFlickable.interactive = true
+                    }
+                }
                         if (wasDragged) {
                             var keys = Object.keys(allNodes)
                             if (index < keys.length) {
