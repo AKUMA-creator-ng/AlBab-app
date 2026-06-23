@@ -505,6 +505,7 @@ class MindMapBackend(QObject):
             return None
 
         self.statusChanged.emit("Trying Gemini AI...")
+        last_error = ""
         try:
             from google.api_core.exceptions import ResourceExhausted
 
@@ -520,6 +521,9 @@ class MindMapBackend(QObject):
                         result = _parse_ai_json(response.text)
                         if result and "children" in result:
                             return result
+                        last_error = "Gemini response could not be parsed as mind map"
+                    else:
+                        last_error = "Gemini returned empty response"
                     return None
                 except ResourceExhausted:
                     if self._key_rotation and self._key_rotation.has_keys:
@@ -528,10 +532,11 @@ class MindMapBackend(QObject):
                         self._api_key = self._key_rotation.current
                         self._init_gemini()
                     time.sleep(1 * (2 ** attempt))
-                except Exception:
+                except Exception as e:
+                    last_error = f"Gemini error: {str(e)[:80]}"
                     break
-        except Exception:
-            pass
+        except Exception as e:
+            last_error = f"Gemini init error: {str(e)[:80]}"
         return None
 
     def _try_openai_provider(self, provider, prompt):
@@ -562,8 +567,8 @@ class MindMapBackend(QObject):
                     result = _parse_ai_json(content)
                     if result and "children" in result:
                         return result
-        except Exception:
-            pass
+        except Exception as e:
+            self.statusChanged.emit(f"{provider['name']} failed: {str(e)[:60]}")
         return None
 
     def _count_nodes(self, tree):
@@ -576,5 +581,10 @@ class MindMapBackend(QObject):
         return count
 
     def _local_extract(self, text):
-        keywords = _tfidf_keywords(text, top_n=25)
-        return _build_tree(text, keywords)
+        try:
+            keywords = _tfidf_keywords(text, top_n=25)
+            if not keywords:
+                return {"id": "root", "label": "Document", "description": "Could not extract keywords", "children": []}
+            return _build_tree(text, keywords)
+        except Exception as e:
+            return {"id": "root", "label": "Document", "description": f"Local extraction error: {str(e)[:80]}", "children": []}
