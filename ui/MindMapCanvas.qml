@@ -15,6 +15,7 @@ Item {
     property real canvasHeight: 600
     property int nodeCount: 0
     property bool isZooming: false
+    property bool isPanning: scrollFlickable.moving
 
     property var branchColors: ({
         "branch_0": "#E74C3C", "branch_1": "#3498DB", "branch_2": "#2ECC71",
@@ -356,9 +357,9 @@ Item {
                 var oldZoom = zoomLevel
                 var newZoom
                 if (wheel.angleDelta.y > 0)
-                    newZoom = Math.min(3.0, zoomLevel * 1.12)
+                    newZoom = Math.min(3.0, zoomLevel * 1.1)
                 else
-                    newZoom = Math.max(0.15, zoomLevel / 1.12)
+                    newZoom = Math.max(0.3, zoomLevel / 1.1)
 
                 if (newZoom === oldZoom) return
 
@@ -503,8 +504,8 @@ Item {
                 border.width: 1
                 z: isRoot ? 10 : 1
 
-                Behavior on x { NumberAnimation { duration: root.isZooming ? 0 : 350; easing.type: Easing.OutCubic } }
-                Behavior on y { NumberAnimation { duration: root.isZooming ? 0 : 350; easing.type: Easing.OutCubic } }
+                Behavior on x { NumberAnimation { duration: (isDragged || root.isZooming || root.isPanning) ? 0 : 350; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: (isDragged || root.isZooming || root.isPanning) ? 0 : 350; easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
