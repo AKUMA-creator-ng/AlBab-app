@@ -247,6 +247,24 @@ Item {
         nodeList.model = nodeCount
     }
 
+    function clampContentToBounds() {
+        var contentW = scrollFlickable.contentWidth
+        var contentH = scrollFlickable.contentHeight
+        var viewW = scrollFlickable.width
+        var viewH = scrollFlickable.height
+
+        if (contentW <= viewW) {
+            scrollFlickable.contentX = (contentW - viewW) / 2
+        } else {
+            scrollFlickable.contentX = Math.max(0, Math.min(scrollFlickable.contentX, contentW - viewW))
+        }
+        if (contentH <= viewH) {
+            scrollFlickable.contentY = (contentH - viewH) / 2
+        } else {
+            scrollFlickable.contentY = Math.max(0, Math.min(scrollFlickable.contentY, contentH - viewH))
+        }
+    }
+
     function centerView() {
         var rootPos = nodePositions["root"]
         if (!rootPos) return
@@ -301,6 +319,7 @@ Item {
             collapsedNodes[nodeId] = true
         }
         relayout()
+        clampContentToBounds()
         canvas.requestPaint()
     }
 
