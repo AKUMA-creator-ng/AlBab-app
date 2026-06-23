@@ -77,7 +77,7 @@ from core.formula_library_backend import FormulaLibraryBackend
 from core.tools_backend import ToolsBackend
 from core.mindmap_backend import MindMapBackend
 
-_gemini_key_rotation = KeyRotation()
+_gemini_key_rotation = KeyRotation(keys=settings_mgr.get("api_keys", []))
 
 _math_engine = MathEngine()
 
